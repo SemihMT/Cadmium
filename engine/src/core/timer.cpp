@@ -3,6 +3,11 @@
 
 namespace Cadmium
 {
+  float Timer::Peek() const
+  {
+    Uint64 current = SDL_GetPerformanceCounter();
+    return (current - lastTime) / static_cast<float>(frequency);
+  }
   float Timer::DeltaTime()
   {
     Uint64 current = SDL_GetPerformanceCounter();

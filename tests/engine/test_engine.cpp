@@ -6,7 +6,7 @@
 class TestApp : public Cadmium::Application
 {
 public:
-  void OnRender() override {}
+  void OnRender(SDL_Renderer *renderer) override {}
 };
 
 TEST_CASE("Engine - constructs and destructs without throwing", "[engine]")

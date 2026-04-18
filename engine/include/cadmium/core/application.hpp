@@ -15,7 +15,7 @@ namespace Cadmium
     virtual void OnStart() {}
     virtual void OnUpdate(float dt) {}
     virtual void OnFixedUpdate(float dt) {}
-    virtual void OnRender() = 0;
+    virtual void OnRender(SDL_Renderer *renderer) = 0;
     virtual void OnEvent(SDL_Event &event) {}
     virtual void OnShutdown() {}
 #ifdef CADMIUM_IMGUI

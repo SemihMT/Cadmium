@@ -27,6 +27,8 @@ namespace Cadmium
     void Run();
 
     SDL_Renderer *GetRenderer() const { return m_Renderer; }
+    void SetTargetFPS(int fps) { m_TargetFrameTime = (fps > 0) ? 1.0f / fps : 0.0f; }
+    void SetVSync(bool enabled) { SDL_SetRenderVSync(m_Renderer, enabled ? 1 : 0); }
 
   private:
     void Iterate();
@@ -43,6 +45,7 @@ namespace Cadmium
     SDL_Renderer *m_Renderer{nullptr};
     Timer m_Timer{};
 
+    float m_TargetFrameTime{1.0f / 60.0f};
     static constexpr float m_FixedTimestep{1.0f / 60.0f};
     float m_Accumulator{0.0f};
 

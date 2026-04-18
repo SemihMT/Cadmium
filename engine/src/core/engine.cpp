@@ -89,6 +89,17 @@ namespace Cadmium
 
   void Engine::Iterate()
   {
+
+    if (m_TargetFrameTime > 0.0f)
+    {
+      float elapsed = m_Timer.Peek();
+      if (elapsed < m_TargetFrameTime)
+      {
+        SDL_DelayNS(static_cast<Uint64>((m_TargetFrameTime - elapsed) * 1e9f));
+      }
+    }
+    float dt = m_Timer.DeltaTimeClamped();
+
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
@@ -100,7 +111,6 @@ namespace Cadmium
       m_App->OnEvent(event);
     }
 
-    float dt = m_Timer.DeltaTimeClamped();
     m_Accumulator += dt;
     while (m_Accumulator >= m_FixedTimestep)
     {
@@ -113,7 +123,7 @@ namespace Cadmium
     SDL_SetRenderDrawColor(m_Renderer, 0, 0, 0, 255);
     SDL_RenderClear(m_Renderer);
 
-    m_App->OnRender();
+    m_App->OnRender(m_Renderer);
 #ifdef CADMIUM_IMGUI
     BeginImGuiFrame();
     m_App->OnImGuiRender();

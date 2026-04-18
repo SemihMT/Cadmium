@@ -10,6 +10,7 @@ namespace Cadmium
     Uint64 lastTime{SDL_GetPerformanceCounter()};
     Uint64 frequency{SDL_GetPerformanceFrequency()};
 
+    float Peek() const;
     float DeltaTime();
     float DeltaTimeClamped(float maxDelta = 0.05f);
   };
