@@ -1,0 +1,59 @@
+# .github/workflows/deploy.yml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: sudo apt-get install -y ninja-build
+
+      - name: Install Emscripten
+        uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: latest
+
+      - name: Configure
+        run: cmake --preset Emscripten-Release
+
+      - name: Build
+        run: cmake --build --preset Emscripten-Release --target cadmium-sandbox
+
+      - name: Collect output
+        run: |
+          mkdir -p _site
+          cp build/Emscripten-Release/bin/cadmium-sandbox.html _site/index.html
+          cp build/Emscripten-Release/bin/cadmium-sandbox.js   _site/
+          cp build/Emscripten-Release/bin/cadmium-sandbox.wasm _site/
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
