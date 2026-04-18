@@ -15,7 +15,7 @@ FetchContent_Declare(
     GIT_TAG v1.92.7-docking
 )
 FetchContent_MakeAvailable(imgui)
-include(cmake/ImGui.cmake)
+include(cmake/imgui.cmake)
 endif()
 
 if(NOT EMSCRIPTEN)
