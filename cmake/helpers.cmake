@@ -8,3 +8,15 @@ function(copy_sdl_to_output target)
         )
     endif()
 endfunction()
+
+
+function(copy_engine_assets target)
+    if(NOT EMSCRIPTEN)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_SOURCE_DIR}/engine/assets
+                $<TARGET_FILE_DIR:${target}>/assets
+            COMMENT "Copying engine assets to output directory"
+        )
+    endif()
+endfunction()

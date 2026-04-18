@@ -1,5 +1,5 @@
-#ifndef CADMIUM_TIMER_H
-#define CADMIUM_TIMER_H
+#ifndef CADMIUM_TIMER_HPP
+#define CADMIUM_TIMER_HPP
 
 #include <SDL3/SDL.h>
 
@@ -16,4 +16,4 @@ namespace Cadmium
   };
 } // namespace Cadmium
 
-#endif // CADMIUM_TIMER_H
+#endif // CADMIUM_TIMER_HPP

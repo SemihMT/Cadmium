@@ -1,5 +1,5 @@
-#ifndef CADMIUM_APPLICATION_H
-#define CADMIUM_APPLICATION_H
+#ifndef CADMIUM_APPLICATION_HPP
+#define CADMIUM_APPLICATION_HPP
 #include <SDL3/SDL.h>
 
 namespace Cadmium
@@ -31,4 +31,4 @@ namespace Cadmium
 
 } // namespace Cadmium
 
-#endif // CADMIUM_APPLICATION_H
+#endif // CADMIUM_APPLICATION_HPP

@@ -7,6 +7,7 @@ target_link_libraries(cadmium-sandbox PRIVATE
 )
 
 copy_sdl_to_output(cadmium-sandbox)
+copy_engine_assets(cadmium-sandbox)
 
 if(EMSCRIPTEN)
     set_target_properties(cadmium-sandbox PROPERTIES
@@ -16,5 +17,8 @@ if(EMSCRIPTEN)
         -sUSE_SDL=0
         -sALLOW_MEMORY_GROWTH=1
         -sASSERTIONS=1
+        --emrun
+        "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/engine/assets@/assets"
+        "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/sandbox/assets@/assets"
     )
 endif()

@@ -1,5 +1,6 @@
 // Engine.cpp
 #include <cadmium/core/engine.hpp>
+#include <cadmium/core/assets.hpp>
 #include <stdexcept>
 #include <algorithm>
 
@@ -48,6 +49,7 @@ namespace Cadmium
   Engine::Engine(std::unique_ptr<Application> app, const char *title, int width, int height)
       : m_App{std::move(app)}
   {
+
     if (!SDL_Init(SDL_INIT_VIDEO))
       throw std::runtime_error(SDL_GetError());
 
@@ -59,6 +61,18 @@ namespace Cadmium
     if (!m_Renderer)
       throw std::runtime_error(SDL_GetError());
 
+#ifdef CADMIUM_PLATFORM_WEB
+    SetVSync(true);
+#endif
+
+    // Load default background
+    std::string bgPath = AssetPath("assets/Cadmium-bg.bmp");
+    SDL_Surface *surface = SDL_LoadBMP(bgPath.c_str());
+    if (surface)
+    {
+      m_DefaultBackground = SDL_CreateTextureFromSurface(m_Renderer, surface);
+      SDL_DestroySurface(surface);
+    }
 #ifdef CADMIUM_IMGUI
     InitImGui();
 #endif
@@ -71,6 +85,8 @@ namespace Cadmium
 #ifdef CADMIUM_IMGUI
     ShutdownImGui();
 #endif
+    if (m_DefaultBackground)
+      SDL_DestroyTexture(m_DefaultBackground);
     SDL_DestroyRenderer(m_Renderer);
     SDL_DestroyWindow(m_Window);
     SDL_Quit();
@@ -120,8 +136,20 @@ namespace Cadmium
 
     m_App->OnUpdate(dt);
 
-    SDL_SetRenderDrawColor(m_Renderer, 0, 0, 0, 255);
+    SDL_SetRenderDrawColor(m_Renderer,
+                           m_ClearColor.r,
+                           m_ClearColor.g,
+                           m_ClearColor.b,
+                           m_ClearColor.a);
     SDL_RenderClear(m_Renderer);
+
+    if (m_UseDefaultBackground && m_DefaultBackground)
+    {
+      int w, h;
+      SDL_GetWindowSize(m_Window, &w, &h);
+      SDL_FRect dst{0, 0, static_cast<float>(w), static_cast<float>(h)};
+      SDL_RenderTexture(m_Renderer, m_DefaultBackground, nullptr, &dst);
+    }
 
     m_App->OnRender(m_Renderer);
 #ifdef CADMIUM_IMGUI
@@ -130,5 +158,13 @@ namespace Cadmium
     EndImGuiFrame();
 #endif
     SDL_RenderPresent(m_Renderer);
+  }
+  void Engine::SetClearColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+  {
+    m_ClearColor = {r, g, b, a};
+  }
+  void Engine::DisableDefaultBackground()
+  {
+    m_UseDefaultBackground = false;
   }
 } // namespace Cadmium

@@ -29,6 +29,8 @@ namespace Cadmium
     SDL_Renderer *GetRenderer() const { return m_Renderer; }
     void SetTargetFPS(int fps) { m_TargetFrameTime = (fps > 0) ? 1.0f / fps : 0.0f; }
     void SetVSync(bool enabled) { SDL_SetRenderVSync(m_Renderer, enabled ? 1 : 0); }
+    void SetClearColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a = 255);
+    void DisableDefaultBackground();
 
   private:
     void Iterate();
@@ -44,6 +46,13 @@ namespace Cadmium
     SDL_Window *m_Window{nullptr};
     SDL_Renderer *m_Renderer{nullptr};
     Timer m_Timer{};
+    SDL_Texture *m_DefaultBackground{nullptr};
+    struct ClearColor
+    {
+      Uint8 r{0}, g{0}, b{0}, a{255};
+    };
+    ClearColor m_ClearColor{};
+    bool m_UseDefaultBackground{true};
 
     float m_TargetFrameTime{1.0f / 60.0f};
     static constexpr float m_FixedTimestep{1.0f / 60.0f};
