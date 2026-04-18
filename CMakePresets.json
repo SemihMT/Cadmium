@@ -1,0 +1,116 @@
+{
+  "version": 10,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/bin",
+        "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib",
+        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/build/${presetName}/lib",
+        "FETCHCONTENT_BASE_DIR": "${sourceDir}/.cache/fetchcontent"
+      }
+    },
+    {
+      "name": "native-base",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "emscripten-base",
+      "hidden": true,
+      "inherits": "base",
+      "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+      "cacheVariables": {
+        "CMAKE_EXECUTABLE_SUFFIX": ".html"
+      }
+    },
+    {
+      "name": "Native-Debug",
+      "displayName": "Native Debug",
+      "inherits": "native-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "Native-Release",
+      "displayName": "Native Release",
+      "inherits": "native-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "Emscripten-Debug",
+      "displayName": "Emscripten Debug",
+      "inherits": "emscripten-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "Emscripten-Release",
+      "displayName": "Emscripten Release",
+      "inherits": "emscripten-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "Native-Debug",
+      "configurePreset": "Native-Debug"
+    },
+    {
+      "name": "Native-Release",
+      "configurePreset": "Native-Release"
+    },
+    {
+      "name": "Emscripten-Debug",
+      "configurePreset": "Emscripten-Debug"
+    },
+    {
+      "name": "Emscripten-Release",
+      "configurePreset": "Emscripten-Release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "Native-Debug",
+      "configurePreset": "Native-Debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      }
+    },
+    {
+      "name": "Native-Release",
+      "configurePreset": "Native-Release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      }
+    }
+  ]
+}

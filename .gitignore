@@ -1,0 +1,46 @@
+# Build output
+build/
+
+# FetchContent / dependency cache
+.cache/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+
+# Ninja
+.ninja_deps
+.ninja_log
+
+# VSCode
+.vscode/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docview
+
+# Clang
+*.pch
+
+# Compiled output
+*.exe
+*.out
+*.app
+*.lib
+*.a
+*.dll
+*.so
+*.dylib
+
+# Emscripten output
+*.wasm
+*.js.map
+
+# OS
+.DS_Store
+Thumbs.db
