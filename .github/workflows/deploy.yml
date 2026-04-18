@@ -39,8 +39,9 @@ jobs:
         run: |
           mkdir -p _site
           cp build/Emscripten-Release/bin/cadmium-sandbox.html _site/index.html
-          cp build/Emscripten-Release/bin/cadmium-sandbox.js   _site/
           cp build/Emscripten-Release/bin/cadmium-sandbox.wasm _site/
+          cp build/Emscripten-Release/bin/cadmium-sandbox.js   _site/
+          cp build/Emscripten-Release/bin/cadmium-sandbox.data   _site/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
