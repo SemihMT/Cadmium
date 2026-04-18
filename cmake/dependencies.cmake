@@ -8,6 +8,16 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SDL3)
 
+if(CADMIUM_IMGUI)
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG v1.92.7-docking
+)
+FetchContent_MakeAvailable(imgui)
+include(cmake/ImGui.cmake)
+endif()
+
 if(NOT EMSCRIPTEN)
     FetchContent_Declare(
         Catch2

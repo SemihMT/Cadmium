@@ -18,6 +18,9 @@ namespace Cadmium
     virtual void OnRender() = 0;
     virtual void OnEvent(SDL_Event &event) {}
     virtual void OnShutdown() {}
+#ifdef CADMIUM_IMGUI
+    virtual void OnImGuiRender() {}
+#endif
 
     void Quit() { m_Running = false; }
     bool IsRunning() const { return m_Running; }

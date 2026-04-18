@@ -1,5 +1,10 @@
-#include <cadmium/core/Engine.hpp>
-#include <cadmium/core/Application.hpp>
+#include <cadmium/core/engine.hpp>
+#include <cadmium/core/application.hpp>
+
+#ifdef CADMIUM_IMGUI
+#include <imgui.h>
+#endif
+
 #include <iostream>
 
 class SandboxApp : public Cadmium::Application
@@ -7,18 +12,15 @@ class SandboxApp : public Cadmium::Application
 public:
   void OnStart() override
   {
-    // setup goes here
-    std::cout << "SandboxApp OnStart\n";
   }
 
   void OnUpdate(float dt) override
   {
-    // game logic goes here
+    m_DeltaTime = dt;
   }
 
   void OnRender() override
   {
-    // drawing goes here
   }
 
   void OnEvent(SDL_Event &event) override
@@ -27,6 +29,19 @@ public:
       if (event.key.key == SDLK_ESCAPE)
         Quit();
   }
+
+#ifdef CADMIUM_IMGUI
+  void OnImGuiRender() override
+  {
+    ImGui::Begin("Debug");
+    ImGui::Text("Delta time: %.4f", m_DeltaTime);
+    ImGui::Text("FPS: %.1f", 1.0f / m_DeltaTime);
+    ImGui::End();
+  }
+#endif
+
+private:
+  float m_DeltaTime{0.0f};
 };
 
 int main()

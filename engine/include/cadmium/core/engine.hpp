@@ -1,11 +1,19 @@
 #ifndef CADMIUM_ENGINE_HPP
 #define CADMIUM_ENGINE_HPP
+
 #include <cadmium/core/application.hpp>
 #include <cadmium/core/timer.hpp>
 #include <SDL3/SDL.h>
 #include <memory>
+
 #ifdef CADMIUM_PLATFORM_WEB
 #include <emscripten.h>
+#endif
+
+#ifdef CADMIUM_IMGUI
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_sdlrenderer3.h>
 #endif
 
 namespace Cadmium
@@ -18,8 +26,17 @@ namespace Cadmium
 
     void Run();
 
+    SDL_Renderer *GetRenderer() const { return m_Renderer; }
+
   private:
     void Iterate();
+
+#ifdef CADMIUM_IMGUI
+    void InitImGui();
+    void ShutdownImGui();
+    void BeginImGuiFrame();
+    void EndImGuiFrame();
+#endif
 
     std::unique_ptr<Application> m_App{nullptr};
     SDL_Window *m_Window{nullptr};

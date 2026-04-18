@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(CADMIUM_IMGUI "Enable ImGui support" ON)
+
 include(cmake/helpers.cmake)
 message("[Cadmium] - Fetching Dependencies")
 include(cmake/dependencies.cmake)
@@ -16,5 +18,7 @@ add_subdirectory(engine)
 add_subdirectory(editor)
 add_subdirectory(sandbox)
 
+if(NOT EMSCRIPTEN)
 enable_testing()
 add_subdirectory(tests)
+endif()

@@ -15,3 +15,8 @@ target_link_libraries(cadmium-engine PUBLIC
 if(EMSCRIPTEN)
     target_compile_definitions(cadmium-engine PUBLIC CADMIUM_PLATFORM_WEB)
 endif()
+
+if(CADMIUM_IMGUI)
+    target_link_libraries(cadmium-engine PUBLIC imgui-lib)
+    target_compile_definitions(cadmium-engine PUBLIC CADMIUM_IMGUI)
+endif()
