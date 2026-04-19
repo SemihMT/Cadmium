@@ -12,7 +12,7 @@ namespace Cadmium
 
     float Peek() const;
     float DeltaTime();
-    float DeltaTimeClamped(float maxDelta = 0.05f);
+    float DeltaTimeClamped(float maxDelta = 0.25f);
   };
 } // namespace Cadmium
 

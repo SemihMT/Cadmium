@@ -1,12 +1,11 @@
 #ifndef CADMIUM_APPLICATION_HPP
 #define CADMIUM_APPLICATION_HPP
+
+#include <cadmium/core/engine_context.hpp>
 #include <SDL3/SDL.h>
 
 namespace Cadmium
 {
-
-  // Generic "Application" class for the user.
-  // Enables the user to be notified of engine processes
   class Application
   {
   public:
@@ -18,17 +17,18 @@ namespace Cadmium
     virtual void OnRender(SDL_Renderer *renderer) = 0;
     virtual void OnEvent(SDL_Event &event) {}
     virtual void OnShutdown() {}
-#ifdef CADMIUM_IMGUI
     virtual void OnImGuiRender() {}
-#endif
 
-    void Quit() { m_Running = false; }
-    bool IsRunning() const { return m_Running; }
+    void SetContext(IEngineContext *context) { m_Context = context; }
+
+  protected:
+    void Quit() { m_Context->RequestQuit(); }
+    int GetWidth() const { return m_Context->GetWidth(); }
+    int GetHeight() const { return m_Context->GetHeight(); }
 
   private:
-    bool m_Running{true};
+    IEngineContext *m_Context{nullptr};
   };
-
 } // namespace Cadmium
 
 #endif // CADMIUM_APPLICATION_HPP

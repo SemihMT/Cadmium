@@ -39,9 +39,9 @@ public:
       m_PosX = static_cast<float>(m_Radius);
       m_VelocityX = std::abs(m_VelocityX) * m_Damping;
     }
-    if (m_PosX + m_Radius > static_cast<float>(m_Width))
+    if (m_PosX + m_Radius > GetWidth())
     {
-      m_PosX = static_cast<float>(m_Width - m_Radius);
+      m_PosX = static_cast<float>(GetWidth() - m_Radius);
       m_VelocityX = -std::abs(m_VelocityX) * m_Damping;
     }
 
@@ -51,9 +51,9 @@ public:
       m_PosY = static_cast<float>(m_Radius);
       m_VelocityY = std::abs(m_VelocityY) * m_Damping;
     }
-    if (m_PosY + m_Radius > static_cast<float>(m_Height))
+    if (m_PosY + m_Radius > static_cast<float>(GetHeight()))
     {
-      m_PosY = static_cast<float>(m_Height - m_Radius);
+      m_PosY = static_cast<float>(GetHeight() - m_Radius);
       m_VelocityY = -std::abs(m_VelocityY) * m_Damping;
     }
   }
@@ -76,12 +76,6 @@ public:
     if (event.type == SDL_EVENT_KEY_DOWN)
       if (event.key.key == SDLK_ESCAPE)
         Quit();
-
-    if (event.type == SDL_EVENT_WINDOW_RESIZED)
-    {
-      m_Width = event.window.data1;
-      m_Height = event.window.data2;
-    }
   }
 
 #ifdef CADMIUM_IMGUI
@@ -95,7 +89,7 @@ public:
 
     ImGui::SeparatorText("Ball");
     if (ImGui::SliderInt("Radius", &m_Radius, 5, 200))
-      m_Radius = std::clamp(m_Radius, 5, std::min(m_Width, m_Height) / 2);
+      m_Radius = std::clamp(m_Radius, 5, std::min(GetWidth(), GetHeight()) / 2);
     ImGui::ColorEdit3("Color", m_Color);
 
     ImGui::SeparatorText("Actions");
@@ -115,15 +109,11 @@ public:
 private:
   void Reset()
   {
-    m_PosX = static_cast<float>(m_Width) / 2.0f;
-    m_PosY = static_cast<float>(m_Height) / 2.0f;
+    m_PosX =  GetWidth() / 2.0f;
+    m_PosY = GetHeight() / 2.0f;
     m_VelocityX = 400.0f;
     m_VelocityY = -600.0f;
   }
-
-  // Window dimensions
-  int m_Width{1280};
-  int m_Height{720};
 
   // Ball state
   float m_PosX{640.0f};

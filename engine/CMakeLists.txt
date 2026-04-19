@@ -2,6 +2,7 @@ add_library(cadmium-engine STATIC
     src/core/engine.cpp
     src/core/timer.cpp
     src/core/assets.cpp
+    src/core/imgui_layer.cpp
 )
 
 target_include_directories(cadmium-engine
