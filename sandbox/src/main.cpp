@@ -1,5 +1,4 @@
 #include <cadmium/core/engine.hpp>
-#include <cadmium/core/application.hpp>
 #include <SDL3/SDL.h>
 
 #ifdef CADMIUM_IMGUI
@@ -18,10 +17,11 @@ static void DrawFilledCircle(SDL_Renderer *renderer, int cx, int cy, int radius)
   }
 }
 
-class SandboxApp : public Cadmium::Application
+class BallLayer : public Cadmium::Layer
 {
 public:
-  void OnStart() override
+  BallLayer() : Layer("Ball") {}
+  void OnAttach() override
   {
     Reset();
   }
@@ -133,9 +133,11 @@ int main()
   try
   {
     Cadmium::Engine engine(
-        std::make_unique<SandboxApp>(),
         "Cadmium Sandbox",
         1280, 720);
+    engine.PushLayer(std::make_unique<BallLayer>());
+    //engine.SetVSync(true);
+    engine.SetTargetFPS(60);
     engine.Run();
   }
   catch (const std::exception &e)

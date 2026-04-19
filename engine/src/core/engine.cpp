@@ -11,8 +11,8 @@ namespace Cadmium
   void Engine::StaticIterate() { s_Instance->Iterate(); }
 #endif
 
-  Engine::Engine(std::unique_ptr<Application> app, const char *title, int width, int height)
-      : m_App{std::move(app)}, m_Width{width}, m_Height{height}
+  Engine::Engine(const char *title, int width, int height)
+      : m_Width{width}, m_Height{height}
   {
 
     if (!SDL_Init(SDL_INIT_VIDEO))
@@ -26,6 +26,8 @@ namespace Cadmium
     if (!m_Renderer)
       throw std::runtime_error(SDL_GetError());
 
+    m_Frequency = SDL_GetPerformanceFrequency();
+    m_LastCounter = SDL_GetPerformanceCounter();
 #ifdef CADMIUM_PLATFORM_WEB
     SetVSync(true);
 #endif
@@ -43,7 +45,6 @@ namespace Cadmium
     }
 
     m_ImGuiLayer.Init(m_Window, m_Renderer);
-    m_App->SetContext(this);
   }
 
   Engine::~Engine()
@@ -58,7 +59,6 @@ namespace Cadmium
 
   void Engine::Run()
   {
-    m_App->OnStart();
 #ifdef CADMIUM_PLATFORM_WEB
     s_Instance = this;
     emscripten_set_main_loop(StaticIterate, 0, 1);
@@ -68,30 +68,26 @@ namespace Cadmium
     while (m_Running)
       Iterate();
 
-    m_App->OnShutdown();
+    m_LayerStack.Clear();
 #endif
   }
 
-
-
   void Engine::Iterate()
   {
+    Uint64 frameStart = SDL_GetPerformanceCounter();
 
-    if (m_TargetFrameTime > 0.0f)
-    {
-      float elapsed = m_Timer.Peek();
-      if (elapsed < m_TargetFrameTime)
-      {
-        SDL_DelayNS(static_cast<Uint64>((m_TargetFrameTime - elapsed) * 1e9f));
-      }
-    }
+    Uint64 counter = frameStart;
+    float dt = (counter - m_LastCounter) / (float)m_Frequency;
+    m_LastCounter = counter;
+
+    dt = std::min(dt, m_MaxDeltaTime);
 
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
       m_ImGuiLayer.ProcessEvent(event);
       if (event.type == SDL_EVENT_QUIT)
-      m_Running = false;
+        m_Running = false;
 
       if (event.type == SDL_EVENT_WINDOW_RESIZED)
       {
@@ -99,18 +95,20 @@ namespace Cadmium
         m_Height = event.window.data2;
       }
 
-      m_App->OnEvent(event);
+      for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
+        (*it)->OnEvent(event);
     }
 
-    float dt = m_Timer.DeltaTimeClamped();
     m_Accumulator += dt;
     while (m_Accumulator >= m_FixedTimestep)
     {
-      m_App->OnFixedUpdate(m_FixedTimestep);
+      for (auto &layer : m_LayerStack)
+        layer->OnFixedUpdate(m_FixedTimestep);
       m_Accumulator -= m_FixedTimestep;
     }
 
-    m_App->OnUpdate(dt);
+    for (auto &layer : m_LayerStack)
+      layer->OnUpdate(dt);
 
     SDL_SetRenderDrawColor(m_Renderer,
                            m_ClearColor.r,
@@ -125,17 +123,45 @@ namespace Cadmium
       SDL_RenderTexture(m_Renderer, m_DefaultBackground, nullptr, &dst);
     }
 
-    m_App->OnRender(m_Renderer);
+    for (auto &layer : m_LayerStack)
+      layer->OnRender(m_Renderer);
 
     m_ImGuiLayer.Begin();
-    m_App->OnImGuiRender();
+    for (auto &layer : m_LayerStack)
+      layer->OnImGuiRender();
     m_ImGuiLayer.End(m_Renderer);
-    SDL_RenderPresent(m_Renderer);
 
+    SDL_RenderPresent(m_Renderer);
+    m_LayerStack.FlushPending(this);
+
+    if (m_TargetFrameNS > 0)
+    {
+      Uint64 now = SDL_GetPerformanceCounter();
+      Uint64 elapsed = now - frameStart;
+
+      Uint64 targetTicks =
+          (m_TargetFrameNS * m_Frequency) / 1'000'000'000ULL;
+
+      if (elapsed < targetTicks)
+      {
+        Uint64 remaining = targetTicks - elapsed;
+
+        Uint32 delayMS =
+            static_cast<Uint32>((remaining * 1000) / m_Frequency);
+
+        if (delayMS > 0)
+          SDL_Delay(delayMS);
+
+        while ((SDL_GetPerformanceCounter() - frameStart) < targetTicks)
+        {
+          // busy wait for sub-millisecond precision
+        }
+      }
+    }
 #ifdef CADMIUM_PLATFORM_WEB
     if (!m_Running)
     {
-      m_App->OnShutdown();
+      m_LayerStack.Clear();
       emscripten_cancel_main_loop();
     }
 #endif
