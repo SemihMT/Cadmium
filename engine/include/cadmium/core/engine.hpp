@@ -4,6 +4,7 @@
 #include <cadmium/core/layer_stack.hpp>
 #include <cadmium/core/engine_context.hpp>
 #include <cadmium/core/imgui_layer.hpp>
+#include <cadmium/core/event_bus.hpp>
 #include <SDL3/SDL.h>
 #include <memory>
 
@@ -38,6 +39,7 @@ namespace Cadmium
     void PushOverlay(std::unique_ptr<Layer> layer) override { m_LayerStack.RequestPushOverlay(std::move(layer)); }
     void PopLayer(const std::string &name) override { m_LayerStack.RequestPopLayer(name); }
     void PopOverlay(const std::string &name) override { m_LayerStack.RequestPopOverlay(name); }
+    EventBus& GetEventBus() override { return m_EventBus; }
 
   private:
     void Iterate();
@@ -52,6 +54,7 @@ namespace Cadmium
     SDL_Renderer *m_Renderer{nullptr};
     SDL_Texture *m_DefaultBackground{nullptr};
     ImGuiLayer m_ImGuiLayer{};
+    EventBus m_EventBus{};
 
     int m_Width{0};
     int m_Height{0};

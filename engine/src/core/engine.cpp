@@ -132,6 +132,7 @@ namespace Cadmium
     m_ImGuiLayer.End(m_Renderer);
 
     SDL_RenderPresent(m_Renderer);
+    m_EventBus.Dispatch();
     m_LayerStack.FlushPending(this);
 
     if (m_TargetFrameNS > 0)

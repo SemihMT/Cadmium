@@ -32,11 +32,16 @@ public:
   {
     m_Stack.RequestPopOverlay(name);
   }
+  Cadmium::EventBus& GetEventBus() override
+  {
+
+  }
 
   bool quitRequested{false};
 
 private:
   Cadmium::LayerStack m_Stack;
+  //Cadmium::EventBus m_Bus;
 };
 
 // -----------------------------------------------------------------------

@@ -2,6 +2,7 @@
 #define CADMIUM_ENGINE_CONTEXT_HPP
 #include <memory>
 #include <string>
+#include <cadmium/core/event_bus.hpp>
 namespace Cadmium
 {
   class Layer;
@@ -17,6 +18,7 @@ namespace Cadmium
     virtual void PushOverlay(std::unique_ptr<Layer> layer) = 0;
     virtual void PopLayer(const std::string &name) = 0;
     virtual void PopOverlay(const std::string &name) = 0;
+    virtual EventBus& GetEventBus() = 0;
   };
 } // namespace Cadmium
 

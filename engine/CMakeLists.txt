@@ -3,6 +3,7 @@ add_library(cadmium-engine STATIC
     src/core/assets.cpp
     src/core/imgui_layer.cpp
     src/core/layer_stack.cpp
+    src/core/event_bus.cpp
 )
 
 target_include_directories(cadmium-engine

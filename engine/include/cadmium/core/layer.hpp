@@ -2,6 +2,7 @@
 #define CADMIUM_LAYER_HPP
 
 #include <cadmium/core/engine_context.hpp>
+#include <cadmium/core/event_bus.hpp>
 #include <SDL3/SDL.h>
 #include <string>
 
@@ -27,6 +28,23 @@ namespace Cadmium
     void Quit() { m_Context->RequestQuit(); }
     int GetWidth() const { return m_Context->GetWidth(); }
     int GetHeight() const { return m_Context->GetHeight(); }
+
+    void PushLayer(std::unique_ptr<Layer> layer) { m_Context->PushLayer(std::move(layer)); }
+    void PushOverlay(std::unique_ptr<Layer> layer) { m_Context->PushOverlay(std::move(layer)); }
+    void PopLayer(const std::string &name) { m_Context->PopLayer(name); }
+    void PopOverlay(const std::string &name) { m_Context->PopOverlay(name); }
+
+    template <typename T>
+    void Post(const T &event)
+    {
+      m_Context->GetEventBus().Post(event);
+    }
+
+    template <typename T>
+    Cadmium::SubscriptionToken Subscribe(std::function<void(const T &)> handler)
+    {
+      return m_Context->GetEventBus().Subscribe<T>(std::move(handler));
+    }
 
   private:
     friend class LayerStack;

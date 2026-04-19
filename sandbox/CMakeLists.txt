@@ -1,5 +1,13 @@
 add_executable(cadmium-sandbox
     src/main.cpp
+    src/world_layer.cpp
+    src/render_layer.cpp
+    src/hud_layer.cpp
+    src/debug_overlay.cpp
+)
+
+target_include_directories(cadmium-sandbox PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_link_libraries(cadmium-sandbox PRIVATE
