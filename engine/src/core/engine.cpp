@@ -174,7 +174,8 @@ namespace Cadmium
 #ifdef CADMIUM_PLATFORM_WEB
     if (!m_Running)
     {
-      m_LayerStack.Clear();
+      if (auto *scene = m_SceneManager.GetActiveScene())
+        scene->GetLayerStack().Clear();
       emscripten_cancel_main_loop();
     }
 #endif
