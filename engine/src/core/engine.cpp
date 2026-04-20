@@ -59,6 +59,7 @@ namespace Cadmium
 
   void Engine::Run()
   {
+    m_SceneManager.FlushPending(this);
 #ifdef CADMIUM_PLATFORM_WEB
     s_Instance = this;
     emscripten_set_main_loop(StaticIterate, 0, 1);
@@ -68,7 +69,8 @@ namespace Cadmium
     while (m_Running)
       Iterate();
 
-    m_LayerStack.Clear();
+    if (auto *scene = m_SceneManager.GetActiveScene())
+      scene->GetLayerStack().Clear();
 #endif
   }
 
@@ -81,6 +83,13 @@ namespace Cadmium
     m_LastCounter = counter;
 
     dt = std::min(dt, m_MaxDeltaTime);
+
+    Scene *scene = m_SceneManager.GetActiveScene();
+    if (!scene)
+      return;
+
+    auto &layerStack = scene->GetLayerStack();
+    auto &eventBus = scene->GetEventBus();
 
     SDL_Event event;
     while (SDL_PollEvent(&event))
@@ -95,19 +104,19 @@ namespace Cadmium
         m_Height = event.window.data2;
       }
 
-      for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
+      for (auto it = layerStack.rbegin(); it != layerStack.rend(); ++it)
         (*it)->OnEvent(event);
     }
 
     m_Accumulator += dt;
     while (m_Accumulator >= m_FixedTimestep)
     {
-      for (auto &layer : m_LayerStack)
+      for (auto &layer : layerStack)
         layer->OnFixedUpdate(m_FixedTimestep);
       m_Accumulator -= m_FixedTimestep;
     }
 
-    for (auto &layer : m_LayerStack)
+    for (auto &layer : layerStack)
       layer->OnUpdate(dt);
 
     SDL_SetRenderDrawColor(m_Renderer,
@@ -123,17 +132,18 @@ namespace Cadmium
       SDL_RenderTexture(m_Renderer, m_DefaultBackground, nullptr, &dst);
     }
 
-    for (auto &layer : m_LayerStack)
+    for (auto &layer : layerStack)
       layer->OnRender(m_Renderer);
 
     m_ImGuiLayer.Begin();
-    for (auto &layer : m_LayerStack)
+    for (auto &layer : layerStack)
       layer->OnImGuiRender();
     m_ImGuiLayer.End(m_Renderer);
 
     SDL_RenderPresent(m_Renderer);
-    m_EventBus.Dispatch();
-    m_LayerStack.FlushPending(this);
+    eventBus.Dispatch();
+    layerStack.FlushPending(this);
+    m_SceneManager.FlushPending(this);
 
     if (m_TargetFrameNS > 0)
     {

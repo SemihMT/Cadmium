@@ -1,4 +1,5 @@
 #include <cadmium/core/layer_stack.hpp>
+#include <cadmium/core/layer.hpp>
 #include <algorithm>
 
 namespace Cadmium

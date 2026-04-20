@@ -1,6 +1,6 @@
 #ifndef CADMIUM_LAYER_STACK_HPP
 #define CADMIUM_LAYER_STACK_HPP
-
+#include <cadmium/core/engine_context.hpp>
 #include <cadmium/core/layer.hpp>
 #include <vector>
 #include <memory>

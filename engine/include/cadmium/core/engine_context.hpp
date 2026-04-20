@@ -6,9 +6,11 @@
 namespace Cadmium
 {
   class Layer;
+  class Scene;
   class IEngineContext
   {
   public:
+
     virtual ~IEngineContext() = default;
 
     virtual void RequestQuit() = 0;
@@ -19,6 +21,9 @@ namespace Cadmium
     virtual void PopLayer(const std::string &name) = 0;
     virtual void PopOverlay(const std::string &name) = 0;
     virtual EventBus& GetEventBus() = 0;
+    virtual void PushScene(std::unique_ptr<Scene> scene) = 0;
+    virtual void PopScene() = 0;
+    virtual void ReplaceScene(std::unique_ptr<Scene> scene) = 0;
   };
 } // namespace Cadmium
 

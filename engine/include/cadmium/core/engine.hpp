@@ -1,7 +1,7 @@
 #ifndef CADMIUM_ENGINE_HPP
 #define CADMIUM_ENGINE_HPP
 
-#include <cadmium/core/layer_stack.hpp>
+#include <cadmium/core/scene_manager.hpp>
 #include <cadmium/core/engine_context.hpp>
 #include <cadmium/core/imgui_layer.hpp>
 #include <cadmium/core/event_bus.hpp>
@@ -35,11 +35,53 @@ namespace Cadmium
     void RequestQuit() override { m_Running = false; }
     int GetWidth() const override { return m_Width; }
     int GetHeight() const override { return m_Height; }
-    void PushLayer(std::unique_ptr<Layer> layer) override { m_LayerStack.RequestPushLayer(std::move(layer)); }
-    void PushOverlay(std::unique_ptr<Layer> layer) override { m_LayerStack.RequestPushOverlay(std::move(layer)); }
-    void PopLayer(const std::string &name) override { m_LayerStack.RequestPopLayer(name); }
-    void PopOverlay(const std::string &name) override { m_LayerStack.RequestPopOverlay(name); }
-    EventBus& GetEventBus() override { return m_EventBus; }
+    void PushLayer(std::unique_ptr<Layer> layer) override
+    {
+      Scene *scene = m_SceneManager.GetActiveScene();
+      if (!scene)
+        throw std::runtime_error("PushLayer called with no active scene");
+      scene->GetLayerStack().RequestPushLayer(std::move(layer));
+    }
+    void PushOverlay(std::unique_ptr<Layer> layer) override
+    {
+      Scene *scene = m_SceneManager.GetActiveScene();
+      if (!scene)
+        throw std::runtime_error("PushLayer called with no active scene");
+      scene->GetLayerStack().RequestPushOverlay(std::move(layer));
+    }
+    void PopLayer(const std::string &name) override
+    {
+      Scene *scene = m_SceneManager.GetActiveScene();
+      if (!scene)
+        throw std::runtime_error("PushLayer called with no active scene");
+      scene->GetLayerStack().RequestPopLayer(name);
+    }
+    void PopOverlay(const std::string &name) override
+    {
+      Scene *scene = m_SceneManager.GetActiveScene();
+      if (!scene)
+        throw std::runtime_error("PushLayer called with no active scene");
+      scene->GetLayerStack().RequestPopOverlay(name);
+    }
+    EventBus &GetEventBus() override
+    {
+      Scene *scene = m_SceneManager.GetActiveScene();
+      if (!scene)
+        throw std::runtime_error("GetEventBus called with no active scene");
+      return scene->GetEventBus();
+    }
+    void PushScene(std::unique_ptr<Scene> scene) override
+    {
+      m_SceneManager.RequestPush(std::move(scene));
+    }
+    void PopScene() override
+    {
+      m_SceneManager.RequestPop();
+    }
+    void ReplaceScene(std::unique_ptr<Scene> scene) override
+    {
+      m_SceneManager.RequestReplace(std::move(scene));
+    }
 
   private:
     void Iterate();
@@ -49,12 +91,11 @@ namespace Cadmium
     static void StaticIterate();
 #endif
 
-    LayerStack m_LayerStack{};
+    SceneManager m_SceneManager{};
     SDL_Window *m_Window{nullptr};
     SDL_Renderer *m_Renderer{nullptr};
     SDL_Texture *m_DefaultBackground{nullptr};
     ImGuiLayer m_ImGuiLayer{};
-    EventBus m_EventBus{};
 
     int m_Width{0};
     int m_Height{0};
