@@ -1,9 +1,15 @@
 add_executable(cadmium-sandbox
     src/main.cpp
+    src/asteroids_scene.cpp
+    src/stress_scene.cpp
+    src/menu_scene.cpp
     src/world_layer.cpp
     src/render_layer.cpp
     src/hud_layer.cpp
     src/debug_overlay.cpp
+    src/stress_render_layer.cpp
+    src/stress_debug_overlay.cpp
+    src/menu_layer.cpp
 )
 
 target_include_directories(cadmium-sandbox PRIVATE

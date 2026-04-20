@@ -1,6 +1,8 @@
 #include "render_layer.hpp"
+#include "components.hpp"
 #include <cmath>
 #include <numbers>
+#include <cadmium/ecs/world.hpp>
 
 namespace Sandbox
 {
@@ -16,6 +18,22 @@ namespace Sandbox
     {
       DrawThrust(renderer);
       DrawShip(renderer);
+    }
+
+    auto &world = GetWorld();
+    for (auto &[entity, transform] : world.Query<Cadmium::Transform>())
+    {
+      Sandbox::Debris *debris = world.TryGetComponent<Sandbox::Debris>(entity);
+      if (!debris)
+        continue;
+
+      Uint8 r = static_cast<Uint8>(debris->r * 255);
+      Uint8 g = static_cast<Uint8>(debris->g * 255);
+      Uint8 b = static_cast<Uint8>(debris->b * 255);
+      Uint8 a = static_cast<Uint8>(debris->alpha * 255);
+
+      SDL_SetRenderDrawColor(renderer, r, g, b, a);
+      DrawCircle(renderer, transform->x, transform->y, debris->radius, 6);
     }
   }
 

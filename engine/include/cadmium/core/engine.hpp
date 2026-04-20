@@ -35,6 +35,10 @@ namespace Cadmium
     void RequestQuit() override { m_Running = false; }
     int GetWidth() const override { return m_Width; }
     int GetHeight() const override { return m_Height; }
+    Scene *GetActiveScene() override
+    {
+      return m_SceneManager.GetActiveScene();
+    }
     void PushLayer(std::unique_ptr<Layer> layer) override
     {
       Scene *scene = m_SceneManager.GetActiveScene();

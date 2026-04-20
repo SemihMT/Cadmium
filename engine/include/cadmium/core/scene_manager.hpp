@@ -12,9 +12,6 @@ namespace Cadmium
   class SceneManager
   {
   public:
-    // Called by engine each frame
-    void Update(IEngineContext* context);
-
     // Active scene accessors
     Scene* GetActiveScene();
     bool   HasActiveScene() const { return !m_Stack.empty(); }

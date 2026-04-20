@@ -116,6 +116,8 @@ namespace Cadmium
       m_Accumulator -= m_FixedTimestep;
     }
 
+    scene->GetWorld().Update(m_FixedTimestep);
+
     for (auto &layer : layerStack)
       layer->OnUpdate(dt);
 

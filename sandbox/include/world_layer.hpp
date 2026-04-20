@@ -76,6 +76,7 @@ namespace Sandbox
     Cadmium::SubscriptionToken m_RestartToken;
     Cadmium::SubscriptionToken m_SpawnAsteroidToken;
     Cadmium::SubscriptionToken m_InvincibilityToken;
+    Cadmium::SubscriptionToken m_DebrisToken;
   };
 
 } // namespace Sandbox

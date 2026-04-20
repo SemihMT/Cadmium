@@ -2,12 +2,17 @@
 #define CADMIUM_LAYER_HPP
 
 #include <cadmium/core/engine_context.hpp>
-#include <cadmium/core/event_bus.hpp>
 #include <SDL3/SDL.h>
+#include <functional>
+#include <memory>
 #include <string>
 
 namespace Cadmium
 {
+
+  class Scene;
+  class World;
+
   class Layer
   {
   public:
@@ -25,14 +30,19 @@ namespace Cadmium
     const std::string& GetName() const { return m_Name; }
 
   protected:
-    void Quit() { m_Context->RequestQuit(); }
-    int GetWidth() const { return m_Context->GetWidth(); }
-    int GetHeight() const { return m_Context->GetHeight(); }
+    void Quit()                                     { m_Context->RequestQuit(); }
+    int GetWidth() const                            { return m_Context->GetWidth(); }
+    int GetHeight() const                           { return m_Context->GetHeight(); }
+    Scene* GetActiveScene()                         { return m_Context->GetActiveScene(); }
+    void PushLayer(std::unique_ptr<Layer> layer)    { m_Context->PushLayer(std::move(layer)); }
+    void PushOverlay(std::unique_ptr<Layer> layer)  { m_Context->PushOverlay(std::move(layer)); }
+    void PopLayer(const std::string &name)          { m_Context->PopLayer(name); }
+    void PopOverlay(const std::string &name)        { m_Context->PopOverlay(name); }
+    World &GetWorld();
 
-    void PushLayer(std::unique_ptr<Layer> layer) { m_Context->PushLayer(std::move(layer)); }
-    void PushOverlay(std::unique_ptr<Layer> layer) { m_Context->PushOverlay(std::move(layer)); }
-    void PopLayer(const std::string &name) { m_Context->PopLayer(name); }
-    void PopOverlay(const std::string &name) { m_Context->PopOverlay(name); }
+    void PushScene(std::unique_ptr<Scene> scene);
+    void PopScene();
+    void ReplaceScene(std::unique_ptr<Scene> scene);
 
     template <typename T>
     void Post(const T &event)

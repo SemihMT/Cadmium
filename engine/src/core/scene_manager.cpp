@@ -2,15 +2,16 @@
 
 namespace Cadmium
 {
-  Scene* SceneManager::GetActiveScene()
+  Scene *SceneManager::GetActiveScene()
   {
-    if (m_Stack.empty()) return nullptr;
+    if (m_Stack.empty())
+      return nullptr;
     return m_Stack.back().get();
   }
 
   void SceneManager::RequestPush(std::unique_ptr<Scene> scene)
   {
-    m_Pending.push_back(PushCmd{ std::move(scene) });
+    m_Pending.push_back(PushCmd{std::move(scene)});
   }
 
   void SceneManager::RequestPop()
@@ -20,66 +21,69 @@ namespace Cadmium
 
   void SceneManager::RequestReplace(std::unique_ptr<Scene> scene)
   {
-    m_Pending.push_back(ReplaceCmd{ std::move(scene) });
+    m_Pending.push_back(ReplaceCmd{std::move(scene)});
   }
 
-  void SceneManager::FlushPending(IEngineContext* context)
+  void SceneManager::FlushPending(IEngineContext *context)
   {
-    if (m_Pending.empty()) return;
+    if (m_Pending.empty())
+      return;
 
     std::vector<Command> toProcess;
     std::swap(toProcess, m_Pending);
 
-    for (auto& cmd : toProcess)
+    for (auto &cmd : toProcess)
     {
-      std::visit([&](auto&& c)
-      {
+      std::visit([&](auto &&c)
+                 {
         using T = std::decay_t<decltype(c)>;
         if constexpr (std::is_same_v<T, PushCmd>)
           ApplyPush(std::move(c.scene), context);
         else if constexpr (std::is_same_v<T, PopCmd>)
           ApplyPop(context);
         else if constexpr (std::is_same_v<T, ReplaceCmd>)
-          ApplyReplace(std::move(c.scene), context);
-      }, cmd);
+          ApplyReplace(std::move(c.scene), context); }, cmd);
     }
   }
 
   void SceneManager::ApplyPush(std::unique_ptr<Scene> scene,
-                                IEngineContext* context)
+                               IEngineContext *context)
   {
-    // Pause current scene
     if (!m_Stack.empty())
       m_Stack.back()->OnExit();
 
     scene->SetContext(context);
     m_Stack.push_back(std::move(scene));
+    m_Stack.back()->GetWorld().Start(); // start world before OnEnter
     m_Stack.back()->OnEnter();
   }
 
-  void SceneManager::ApplyPop(IEngineContext* context)
+  void SceneManager::ApplyPop(IEngineContext *context)
   {
-    if (m_Stack.empty()) return;
+    if (m_Stack.empty())
+      return;
 
+    m_Stack.back()->GetWorld().Stop(); // stop world before OnDestroy
     m_Stack.back()->OnDestroy();
     m_Stack.pop_back();
 
-    // Resume previous scene
     if (!m_Stack.empty())
       m_Stack.back()->OnEnter();
   }
 
   void SceneManager::ApplyReplace(std::unique_ptr<Scene> scene,
-                                   IEngineContext* context)
+                                  IEngineContext *context)
   {
     if (!m_Stack.empty())
     {
+      m_Stack.back()->GetWorld().Stop();
       m_Stack.back()->OnDestroy();
       m_Stack.pop_back();
     }
 
     scene->SetContext(context);
     m_Stack.push_back(std::move(scene));
+    m_Stack.back()->GetWorld().Start();
     m_Stack.back()->OnEnter();
   }
 

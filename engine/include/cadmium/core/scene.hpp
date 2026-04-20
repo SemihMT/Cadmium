@@ -1,15 +1,16 @@
 #ifndef CADMIUM_SCENE_HPP
 #define CADMIUM_SCENE_HPP
 
-#include <cadmium/core/engine_context.hpp>
 #include <cadmium/core/layer_stack.hpp>
 #include <cadmium/core/event_bus.hpp>
+#include <cadmium/ecs/world.hpp>
 #include <string>
 #include <memory>
 #include <functional>
 
 namespace Cadmium
 {
+  class IEngineContext;
   class Scene
   {
   public:
@@ -23,6 +24,7 @@ namespace Cadmium
     virtual void OnDestroy() {}
 
     const std::string &GetName() const { return m_Name; }
+    World& GetWorld() { return m_World; }
 
   public: // Engine-facing interface
     void SetContext(IEngineContext *context);
@@ -53,14 +55,21 @@ namespace Cadmium
       return m_EventBus.Subscribe<T>(std::move(handler));
     }
 
+    Entity CreateEntity() { return m_World.CreateEntity(); }
+    void DestroyEntity(Entity e) { m_World.DestroyEntity(e); }
+
+    template <typename T, typename... Args>
+    T &RegisterSystem(int order, Args &&...args)
+    {
+      return m_World.RegisterSystem<T>(order, std::forward<Args>(args)...);
+    }
+
   private:
     std::string m_Name;
-    LayerStack m_LayerStack;
     EventBus m_EventBus;
+    LayerStack m_LayerStack;
     IEngineContext *m_Context{nullptr};
-
-    // World (ECS) stub - will be implemented when ECS is added
-    // std::unique_ptr<World> m_World;
+    World m_World;
   };
 
 } // namespace Cadmium
