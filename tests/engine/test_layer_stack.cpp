@@ -18,6 +18,7 @@ namespace Cadmium
     void RequestQuit() override { quitRequested = true; }
     int GetWidth() const override { return 1280; }
     int GetHeight() const override { return 720; }
+    void SetDefaultBackground(bool enabled) override {}
     Scene* GetActiveScene() override {};
     void PushLayer(std::unique_ptr<Cadmium::Layer> layer) override
     {

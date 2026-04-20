@@ -5,6 +5,7 @@ namespace Sandbox
 {
   void MenuScene::OnEnter()
   {
+    SetDefaultBackground(false);
     PushOverlay(std::make_unique<MenuLayer>());
   }
 

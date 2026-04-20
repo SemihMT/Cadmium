@@ -18,6 +18,7 @@ namespace Cadmium
     virtual void RequestQuit() = 0;
     virtual int GetWidth() const = 0;
     virtual int GetHeight() const = 0;
+    virtual void SetDefaultBackground(bool enabled) = 0;
     virtual Scene* GetActiveScene() = 0;
     virtual void PushLayer(std::unique_ptr<Layer> layer) = 0;
     virtual void PushOverlay(std::unique_ptr<Layer> layer) = 0;

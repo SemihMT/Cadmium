@@ -35,6 +35,10 @@ namespace Cadmium
     void RequestQuit() override { m_Running = false; }
     int GetWidth() const override { return m_Width; }
     int GetHeight() const override { return m_Height; }
+    void SetDefaultBackground(bool enabled) override
+    {
+      m_UseDefaultBackground = enabled;
+    }
     Scene *GetActiveScene() override
     {
       return m_SceneManager.GetActiveScene();

@@ -9,6 +9,7 @@ namespace Sandbox
 {
   void AsteroidsScene::OnEnter()
   {
+    SetDefaultBackground(false);
     RegisterSystem<DebrisSystem>(0);
 
     m_ReturnToken = Subscribe<ReturnToMenuEvent>([this](const ReturnToMenuEvent&)

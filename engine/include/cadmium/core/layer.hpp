@@ -33,6 +33,7 @@ namespace Cadmium
     void Quit()                                     { m_Context->RequestQuit(); }
     int GetWidth() const                            { return m_Context->GetWidth(); }
     int GetHeight() const                           { return m_Context->GetHeight(); }
+    void SetDefaultBackground(bool enabled)         { m_Context->SetDefaultBackground(enabled); }
     Scene* GetActiveScene()                         { return m_Context->GetActiveScene(); }
     void PushLayer(std::unique_ptr<Layer> layer)    { m_Context->PushLayer(std::move(layer)); }
     void PushOverlay(std::unique_ptr<Layer> layer)  { m_Context->PushOverlay(std::move(layer)); }

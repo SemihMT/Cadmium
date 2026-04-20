@@ -5,6 +5,7 @@ namespace Sandbox
 {
   void StressScene::OnEnter()
   {
+    SetDefaultBackground(false);
     auto& system = RegisterSystem<MovementSystem>(0);
     system.SetBounds(GetWidth(), GetHeight());
 

@@ -35,6 +35,10 @@ namespace Cadmium
     void Quit();
     int GetWidth() const;
     int GetHeight() const;
+    void SetDefaultBackground(bool enabled)
+    {
+      m_Context->SetDefaultBackground(enabled);
+    }
     void PushScene(std::unique_ptr<Scene> scene);
     void PopScene();
     void ReplaceScene(std::unique_ptr<Scene> scene);
