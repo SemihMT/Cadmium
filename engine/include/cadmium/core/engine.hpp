@@ -14,6 +14,7 @@
 
 namespace Cadmium
 {
+  /// @brief  Cadmium's brains, so to speak. Handles window creation, renderer, frame timing, scene creation etc
   class Engine : public IEngineContext
   {
   public:
@@ -23,76 +24,34 @@ namespace Cadmium
     void Run();
 
     void SetClearColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a = 255);
-    void SetVSync(bool enabled) { SDL_SetRenderVSync(m_Renderer, enabled ? 1 : 0); }
+    void SetVSync(bool enabled);
     void DisableDefaultBackground();
 
-    SDL_Renderer *GetRenderer() const { return m_Renderer; }
-    void SetTargetFPS(int fps) { m_TargetFrameNS = (fps > 0)
-                                                       ? static_cast<Uint64>(1e9 / fps)
-                                                       : 0ULL; }
+    SDL_Renderer *GetRenderer() const;
+    void SetTargetFPS(int fps);
 
   public: // IEngineContext API
-    void RequestQuit() override { m_Running = false; }
-    int GetWidth() const override { return m_Width; }
-    int GetHeight() const override { return m_Height; }
-    void SetDefaultBackground(bool enabled) override
-    {
-      m_UseDefaultBackground = enabled;
-    }
-    Scene *GetActiveScene() override
-    {
-      return m_SceneManager.GetActiveScene();
-    }
-    void PushLayer(std::unique_ptr<Layer> layer) override
-    {
-      Scene *scene = m_SceneManager.GetActiveScene();
-      if (!scene)
-        throw std::runtime_error("PushLayer called with no active scene");
-      scene->GetLayerStack().RequestPushLayer(std::move(layer));
-    }
-    void PushOverlay(std::unique_ptr<Layer> layer) override
-    {
-      Scene *scene = m_SceneManager.GetActiveScene();
-      if (!scene)
-        throw std::runtime_error("PushLayer called with no active scene");
-      scene->GetLayerStack().RequestPushOverlay(std::move(layer));
-    }
-    void PopLayer(const std::string &name) override
-    {
-      Scene *scene = m_SceneManager.GetActiveScene();
-      if (!scene)
-        throw std::runtime_error("PushLayer called with no active scene");
-      scene->GetLayerStack().RequestPopLayer(name);
-    }
-    void PopOverlay(const std::string &name) override
-    {
-      Scene *scene = m_SceneManager.GetActiveScene();
-      if (!scene)
-        throw std::runtime_error("PushLayer called with no active scene");
-      scene->GetLayerStack().RequestPopOverlay(name);
-    }
-    EventBus &GetEventBus() override
-    {
-      Scene *scene = m_SceneManager.GetActiveScene();
-      if (!scene)
-        throw std::runtime_error("GetEventBus called with no active scene");
-      return scene->GetEventBus();
-    }
-    void PushScene(std::unique_ptr<Scene> scene) override
-    {
-      m_SceneManager.RequestPush(std::move(scene));
-    }
-    void PopScene() override
-    {
-      m_SceneManager.RequestPop();
-    }
-    void ReplaceScene(std::unique_ptr<Scene> scene) override
-    {
-      m_SceneManager.RequestReplace(std::move(scene));
-    }
+    void RequestQuit() override;
+    int GetWidth() const override;
+    int GetHeight() const override;
+    void  SetDefaultBackground(bool enabled) override;
+
+    Scene *GetActiveScene() override;
+
+    void PushLayer(std::unique_ptr<Layer> layer) override;
+    void PushOverlay(std::unique_ptr<Layer> layer) override;
+    void PopLayer(const std::string &name) override;
+    void PopOverlay(const std::string &name) override;
+
+    EventBus &GetEventBus() override;
+
+    void PushScene(std::unique_ptr<Scene> scene) override;
+    void PopScene() override;
+    void ReplaceScene(std::unique_ptr<Scene> scene) override;
 
   private:
     void Iterate();
+    void TrySetDefaultBackground();
 
 #ifdef CADMIUM_PLATFORM_WEB
     static Engine *s_Instance;
@@ -110,7 +69,10 @@ namespace Cadmium
     bool m_Running{true};
     bool m_UseDefaultBackground{true};
 
-    struct ClearColor{ Uint8 r{0}, g{0}, b{0}, a{255}; };
+    struct ClearColor
+    {
+      Uint8 r{0}, g{0}, b{0}, a{255};
+    };
     ClearColor m_ClearColor{0, 0, 0, 255};
 
     float m_FixedTimestep{1.0f / 60.0f};
@@ -119,7 +81,6 @@ namespace Cadmium
     Uint64 m_TargetFrameNS{0};
     Uint64 m_LastCounter{0};
     Uint64 m_Frequency{0};
-
   };
 
 } // namespace Cadmium

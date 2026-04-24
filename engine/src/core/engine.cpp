@@ -1,4 +1,3 @@
-// Engine.cpp
 #include <cadmium/core/engine.hpp>
 #include <cadmium/core/assets.hpp>
 #include <stdexcept>
@@ -28,21 +27,12 @@ namespace Cadmium
 
     m_Frequency = SDL_GetPerformanceFrequency();
     m_LastCounter = SDL_GetPerformanceCounter();
+
 #ifdef CADMIUM_PLATFORM_WEB
     SetVSync(true);
 #endif
 
-    std::string bgPath = AssetPath("assets/Cadmium-bg.bmp");
-    SDL_Surface *surface = SDL_LoadBMP(bgPath.c_str());
-    if (surface)
-    {
-      m_DefaultBackground = SDL_CreateTextureFromSurface(m_Renderer, surface);
-      SDL_DestroySurface(surface);
-    }
-    else
-    {
-      SDL_Log("Cadmium: default background not found at '%s'", bgPath.c_str());
-    }
+    TrySetDefaultBackground();
 
     m_ImGuiLayer.Init(m_Window, m_Renderer);
   }
@@ -59,6 +49,8 @@ namespace Cadmium
 
   void Engine::Run()
   {
+    // Process any scenes pushed after engine init
+    // but before Run() was called
     m_SceneManager.FlushPending(this);
 #ifdef CADMIUM_PLATFORM_WEB
     s_Instance = this;
@@ -113,10 +105,9 @@ namespace Cadmium
     {
       for (auto &layer : layerStack)
         layer->OnFixedUpdate(m_FixedTimestep);
+      scene->GetWorld().Update(m_FixedTimestep);
       m_Accumulator -= m_FixedTimestep;
     }
-
-    scene->GetWorld().Update(m_FixedTimestep);
 
     for (auto &layer : layerStack)
       layer->OnUpdate(dt);
@@ -180,12 +171,122 @@ namespace Cadmium
     }
 #endif
   }
+  void Engine::TrySetDefaultBackground()
+  {
+    std::string bgPath = AssetPath("assets/Cadmium-bg.bmp");
+    SDL_Surface *surface = SDL_LoadBMP(bgPath.c_str());
+    if (surface)
+    {
+      m_DefaultBackground = SDL_CreateTextureFromSurface(m_Renderer, surface);
+      SDL_DestroySurface(surface);
+    }
+    else
+    {
+      SDL_Log("Cadmium: default background not found at '%s'", bgPath.c_str());
+    }
+  }
+
   void Engine::SetClearColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a)
   {
     m_ClearColor = {r, g, b, a};
+  }
+  void Engine::SetVSync(bool enabled)
+  {
+    SDL_SetRenderVSync(m_Renderer, enabled ? 1 : 0);
   }
   void Engine::DisableDefaultBackground()
   {
     m_UseDefaultBackground = false;
   }
+  SDL_Renderer *Engine::GetRenderer() const
+  {
+    return m_Renderer;
+  }
+  void Engine::SetTargetFPS(int fps)
+  {
+    m_TargetFrameNS = (fps > 0)
+                          ? static_cast<Uint64>(1e9 / fps)
+                          : 0ULL;
+  }
+  // IEngineContext API:
+  void Engine::RequestQuit()
+  {
+    m_Running = false;
+  }
+
+  int Engine::GetWidth() const
+  {
+    return m_Width;
+  }
+
+  int Engine::GetHeight() const
+  {
+    return m_Height;
+  }
+
+  void Engine::SetDefaultBackground(bool enabled)
+  {
+    m_UseDefaultBackground = enabled;
+  }
+
+  Scene *Engine::GetActiveScene()
+  {
+    return m_SceneManager.GetActiveScene();
+  }
+
+  void Engine::PushLayer(std::unique_ptr<Layer> layer)
+  {
+    Scene *scene = m_SceneManager.GetActiveScene();
+    if (!scene)
+      throw std::runtime_error("PushLayer called with no active scene");
+    scene->GetLayerStack().RequestPushLayer(std::move(layer));
+  }
+
+  void Engine::PushOverlay(std::unique_ptr<Layer> layer)
+  {
+    Scene *scene = m_SceneManager.GetActiveScene();
+    if (!scene)
+      throw std::runtime_error("PushOverlay called with no active scene");
+    scene->GetLayerStack().RequestPushOverlay(std::move(layer));
+  }
+
+  void Engine::PopLayer(const std::string &name)
+  {
+    Scene *scene = m_SceneManager.GetActiveScene();
+    if (!scene)
+      throw std::runtime_error("PopLayer called with no active scene");
+    scene->GetLayerStack().RequestPopLayer(name);
+  }
+
+  void Engine::PopOverlay(const std::string &name)
+  {
+    Scene *scene = m_SceneManager.GetActiveScene();
+    if (!scene)
+      throw std::runtime_error("PopOverlay called with no active scene");
+    scene->GetLayerStack().RequestPopOverlay(name);
+  }
+
+  EventBus &Engine::GetEventBus()
+  {
+    Scene *scene = m_SceneManager.GetActiveScene();
+    if (!scene)
+      throw std::runtime_error("GetEventBus called with no active scene");
+    return scene->GetEventBus();
+  }
+
+  void Engine::PushScene(std::unique_ptr<Scene> scene)
+  {
+    m_SceneManager.RequestPush(std::move(scene));
+  }
+
+  void Engine::PopScene()
+  {
+    m_SceneManager.RequestPop();
+  }
+
+  void Engine::ReplaceScene(std::unique_ptr<Scene> scene)
+  {
+    m_SceneManager.RequestReplace(std::move(scene));
+  }
+
 } // namespace Cadmium
