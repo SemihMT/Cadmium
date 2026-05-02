@@ -1,7 +1,7 @@
 #include "menu_layer.hpp"
 #include "asteroids_scene.hpp"
 #include "stress_scene.hpp"
-
+#include <cadmium/scripting/scripted_scene.hpp>
 namespace Sandbox
 {
   void MenuLayer::OnEvent(SDL_Event& event)
@@ -51,6 +51,11 @@ namespace Sandbox
     ImGui::SetCursorPosX((w - buttonW) * 0.5f);
     if (ImGui::Button("ECS Stress Test", { buttonW, buttonH }))
       ReplaceScene(std::make_unique<StressScene>());
+
+    ImGui::Spacing();
+    ImGui::SetCursorPosX((w - buttonW) * 0.5f);
+    if (ImGui::Button("Lua Scripting", { buttonW, buttonH }))
+      ReplaceScene(std::make_unique<Cadmium::ScriptedScene>("assets/scripts/main.lua"));
 
     ImGui::Spacing();
     ImGui::Spacing();

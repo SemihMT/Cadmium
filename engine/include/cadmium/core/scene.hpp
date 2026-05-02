@@ -46,7 +46,9 @@ namespace Cadmium
     void PushOverlay(std::unique_ptr<Layer> layer);
     void PopLayer(const std::string &name);
     void PopOverlay(const std::string &name);
-
+    TTF_Font* GetFont();
+    DrawCommandQueue &GetDrawQueue();
+    sol::state& GetLua();
     template <typename T>
     void Post(const T &event)
     {

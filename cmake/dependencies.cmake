@@ -8,6 +8,33 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SDL3)
 
+set(SDLTTF_VENDORED ON)
+FetchContent_Declare(
+    SDL_ttf
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL_ttf.git
+    GIT_TAG release-3.2.2
+)
+
+FetchContent_MakeAvailable(SDL_ttf)
+
+FetchContent_Declare(
+    SDL_image
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
+    GIT_TAG release-3.4.2
+)
+
+FetchContent_MakeAvailable(SDL_image)
+
+#fetch Lua
+include(cmake/lua.cmake)
+
+FetchContent_Declare(
+    sol2
+    GIT_REPOSITORY https://github.com/ThePhD/sol2.git
+    GIT_TAG        v3.5.0
+)
+FetchContent_MakeAvailable(sol2)
+
 if(CADMIUM_IMGUI)
 FetchContent_Declare(
     imgui

@@ -42,6 +42,9 @@ namespace Cadmium
     void PushScene(std::unique_ptr<Cadmium::Scene> scene) override {};
     void PopScene() override {};
     void ReplaceScene(std::unique_ptr<Cadmium::Scene> scene) override {};
+    TTF_Font* GetFont() override {};
+    DrawCommandQueue& GetDrawQueue() override {};
+    sol::state& GetLua() override {};
 
     bool quitRequested{false};
 

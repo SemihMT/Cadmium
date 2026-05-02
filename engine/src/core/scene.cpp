@@ -1,4 +1,5 @@
 #include <cadmium/core/scene.hpp>
+#include <SDL3_ttf/SDL_ttf.h>
 
 namespace Cadmium
 {
@@ -58,5 +59,17 @@ namespace Cadmium
   {
     m_LayerStack.RequestPopOverlay(name);
   }
-
-} // namespace Cadmium
+  TTF_Font* Scene::GetFont()
+  {
+    return m_Context->GetFont();
+  }
+  DrawCommandQueue &Scene::GetDrawQueue()
+  {
+    return m_Context->GetDrawQueue();
+  }
+  sol::state &Scene::GetLua()
+  {
+    return m_Context->GetLua();
+  }
+}
+// namespace Cadmium

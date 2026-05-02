@@ -7,6 +7,8 @@ add_library(cadmium-engine STATIC
     src/core/event_bus.cpp
     src/core/scene_manager.cpp
     src/core/scene.cpp
+    src/core/input_manager.cpp
+    src/scripting/scripted_scene.cpp
 )
 
 target_include_directories(cadmium-engine
@@ -14,10 +16,15 @@ target_include_directories(cadmium-engine
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_link_libraries(cadmium-engine PUBLIC
-    SDL3::SDL3
-)
+target_link_libraries(cadmium-engine
+    PUBLIC
+        SDL3::SDL3
+        lua::lua
+        sol2::sol2
+        SDL3_ttf::SDL3_ttf
+        SDL3_image::SDL3_image
 
+)
 if(EMSCRIPTEN)
     target_compile_definitions(cadmium-engine PUBLIC CADMIUM_PLATFORM_WEB)
 endif()

@@ -1,9 +1,14 @@
 #include "asteroids_scene.hpp"
 #include "menu_scene.hpp"
 #include "world_layer.hpp"
+#include <cadmium/scripting/script_render_layer.hpp>
+#include <cadmium/core/assets.hpp>
 #include "render_layer.hpp"
 #include "hud_layer.hpp"
 #include "debug_overlay.hpp"
+#include <sol/sol.hpp>
+#include <cadmium/scripting/script_update_layer.hpp>
+
 
 namespace Sandbox
 {

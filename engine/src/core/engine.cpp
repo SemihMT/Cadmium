@@ -25,6 +25,13 @@ namespace Cadmium
     if (!m_Renderer)
       throw std::runtime_error(SDL_GetError());
 
+    if(!TTF_Init())
+      throw std::runtime_error(SDL_GetError());
+
+    m_Font = TTF_OpenFont(AssetPath("assets/fonts/JetBrainsMono-Regular.ttf").c_str(), 96);
+    if (!m_Font)
+      SDL_Log("Failed to load font: %s", SDL_GetError());
+
     m_Frequency = SDL_GetPerformanceFrequency();
     m_LastCounter = SDL_GetPerformanceCounter();
 
@@ -35,6 +42,16 @@ namespace Cadmium
     TrySetDefaultBackground();
 
     m_ImGuiLayer.Init(m_Window, m_Renderer);
+
+    m_Lua.open_libraries(
+        sol::lib::base,
+        sol::lib::math,
+        sol::lib::table,
+        sol::lib::string,
+        sol::lib::io,     // for file loading — restrict in sandbox build
+        sol::lib::package // for require()
+    );
+    Lua::BindPhase1(m_Lua, m_Input, m_DrawQueue, m_SceneState);
   }
 
   Engine::~Engine()
@@ -42,6 +59,9 @@ namespace Cadmium
     m_ImGuiLayer.Shutdown();
     if (m_DefaultBackground)
       SDL_DestroyTexture(m_DefaultBackground);
+    if (m_Font)
+      TTF_CloseFont(m_Font);
+    TTF_Quit();
     SDL_DestroyRenderer(m_Renderer);
     SDL_DestroyWindow(m_Window);
     SDL_Quit();
@@ -76,6 +96,8 @@ namespace Cadmium
 
     dt = std::min(dt, m_MaxDeltaTime);
 
+    m_Input.BeginFrame();
+
     Scene *scene = m_SceneManager.GetActiveScene();
     if (!scene)
       return;
@@ -88,8 +110,13 @@ namespace Cadmium
     {
       m_ImGuiLayer.ProcessEvent(event);
       if (event.type == SDL_EVENT_QUIT)
-        m_Running = false;
-
+      {
+        RequestQuit();
+      }
+      if (event.type == SDL_EVENT_MOUSE_WHEEL)
+      {
+        m_Input.OnMouseWheel(event.wheel.x, event.wheel.y);
+      }
       if (event.type == SDL_EVENT_WINDOW_RESIZED)
       {
         m_Width = event.window.data1;
@@ -99,6 +126,12 @@ namespace Cadmium
       for (auto it = layerStack.rbegin(); it != layerStack.rend(); ++it)
         (*it)->OnEvent(event);
     }
+    m_Input.SnapshotPost();
+    m_SceneState.Width = static_cast<float>(m_Width);
+    m_SceneState.Height = static_cast<float>(m_Height);
+    m_SceneState.Time += dt;
+    m_SceneState.DeltaTime = dt;
+    Lua::UpdateSceneBindings(m_Lua, m_SceneState);
 
     m_Accumulator += dt;
     while (m_Accumulator >= m_FixedTimestep)
@@ -112,11 +145,17 @@ namespace Cadmium
     for (auto &layer : layerStack)
       layer->OnUpdate(dt);
 
+    auto toUint8 = [](float channel)
+    {
+      channel = std::clamp(channel, 0.0f, 1.0f);
+      return static_cast<Uint8>(channel * 255.0f);
+    };
+
     SDL_SetRenderDrawColor(m_Renderer,
-                           m_ClearColor.r,
-                           m_ClearColor.g,
-                           m_ClearColor.b,
-                           m_ClearColor.a);
+                           toUint8(m_ClearColor.r),
+                           toUint8(m_ClearColor.g),
+                           toUint8(m_ClearColor.b),
+                           toUint8(m_ClearColor.a));
     SDL_RenderClear(m_Renderer);
 
     if (m_UseDefaultBackground && m_DefaultBackground)
@@ -186,10 +225,16 @@ namespace Cadmium
     }
   }
 
-  void Engine::SetClearColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+  void Engine::SetClearColor(float r, float g, float b, float a)
   {
     m_ClearColor = {r, g, b, a};
   }
+
+  void Engine::SetClearColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+  {
+    SetClearColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
+  }
+
   void Engine::SetVSync(bool enabled)
   {
     SDL_SetRenderVSync(m_Renderer, enabled ? 1 : 0);
@@ -289,4 +334,18 @@ namespace Cadmium
     m_SceneManager.RequestReplace(std::move(scene));
   }
 
+  TTF_Font* Engine::GetFont()
+  {
+    return m_Font;
+  }
+
+  DrawCommandQueue &Engine::GetDrawQueue()
+  {
+    return m_DrawQueue;
+  }
+
+  sol::state &Engine::GetLua()
+  {
+    return m_Lua;
+  }
 } // namespace Cadmium

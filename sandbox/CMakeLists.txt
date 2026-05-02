@@ -22,6 +22,7 @@ target_link_libraries(cadmium-sandbox PRIVATE
 
 copy_sdl_to_output(cadmium-sandbox)
 copy_engine_assets(cadmium-sandbox)
+copy_sandbox_assets(cadmium-sandbox)
 
 if(EMSCRIPTEN)
     set_target_properties(cadmium-sandbox PROPERTIES

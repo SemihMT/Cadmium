@@ -20,3 +20,17 @@ function(copy_engine_assets target)
         )
     endif()
 endfunction()
+
+function(copy_sandbox_assets target)
+    if(NOT EMSCRIPTEN)
+        add_custom_target(copy_assets_${target} ALL
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_SOURCE_DIR}/sandbox/assets
+                $<TARGET_FILE_DIR:${target}>/assets
+            COMMENT "Copying sandbox assets"
+        )
+
+        # Ensure copy runs before the target is used
+        add_dependencies(${target} copy_assets_${target})
+    endif()
+endfunction()
