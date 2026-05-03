@@ -39,6 +39,7 @@ namespace Cadmium
     void PushOverlay(std::unique_ptr<Layer> layer)  { m_Context->PushOverlay(std::move(layer)); }
     void PopLayer(const std::string &name)          { m_Context->PopLayer(name); }
     void PopOverlay(const std::string &name)        { m_Context->PopOverlay(name); }
+    AssetManager& GetAssets()                       { return m_Context->GetAssets(); }
     World &GetWorld();
 
     void PushScene(std::unique_ptr<Scene> scene);

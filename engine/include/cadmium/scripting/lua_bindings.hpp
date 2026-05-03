@@ -215,6 +215,19 @@ namespace Cadmium::Lua
                      {
                        q->Push(DrawCmd::Text{str, x, y, size, toColor(color)});
                      });
+    tbl.set_function("Sprite",
+                    [q, toColor](uint32_t handle,
+                                float x, float y,
+                                sol::variadic_args args)
+                    {
+                        float w        = args.size() > 0 ? args[0].get<float>() : 0.f;
+                        float h        = args.size() > 1 ? args[1].get<float>() : 0.f;
+                        float rotation = args.size() > 2 ? args[2].get<float>() : 0.f;
+                        Color color    = args.size() > 3
+                                        ? toColor(args[3].get<sol::table>())
+                                        : Color{1,1,1,1};
+                        q->Push(DrawCmd::Sprite{ handle, x, y, w, h, rotation, color });
+                    });
 
     tbl.set_function("SetCamera",
                      [q](float x, float y, float zoom)

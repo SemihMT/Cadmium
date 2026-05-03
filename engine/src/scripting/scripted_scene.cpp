@@ -23,7 +23,7 @@ namespace Cadmium
     // ScriptUpdateLayer calls OnUpdate/OnRender hooks
     // ScriptRenderLayer drains the DrawCommandQueue
     PushLayer(std::make_unique<ScriptUpdateLayer>(m_Env, m_EntityRegistry));
-    PushLayer(std::make_unique<ScriptRenderLayer>(GetDrawQueue(), GetFont()));
+    PushLayer(std::make_unique<ScriptRenderLayer>(GetDrawQueue(), GetAssets(), GetFont()));
 
     // Load and execute the script into the isolated environment
     auto result = lua.safe_script_file(

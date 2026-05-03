@@ -3,6 +3,7 @@
 
 #include <cadmium/core/event_bus.hpp>
 #include <cadmium/core/draw_command_queue.hpp>
+#include <cadmium/assets/asset_manager.hpp>
 #include <sol/sol.hpp>
 #include <memory>
 #include <string>
@@ -32,6 +33,7 @@ namespace Cadmium
     virtual void PopScene() = 0;
     virtual void ReplaceScene(std::unique_ptr<Scene> scene) = 0;
     virtual TTF_Font* GetFont() = 0;
+    virtual AssetManager& GetAssets() = 0;
     virtual DrawCommandQueue& GetDrawQueue() = 0;
     virtual sol::state& GetLua() = 0;
   };

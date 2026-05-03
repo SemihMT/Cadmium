@@ -97,7 +97,7 @@ namespace Cadmium
     }
 
     // ── Matrix ────────────────────────────────────────────────────────────
-    // TRS matrix — used by renderer and physics
+    // TRS matrix - used by renderer and physics
     glm::mat4 GetMatrix() const
     {
       glm::mat4 t = glm::translate(glm::mat4(1.f), position);
@@ -106,7 +106,7 @@ namespace Cadmium
       return t * r * s;
     }
 
-    // Forward, right, up vectors — useful for 3D movement
+    // Forward, right, up vectors - useful for 3D movement
     glm::vec3 Forward() const
     {
       return rotation * glm::vec3(0.f, 0.f, -1.f);

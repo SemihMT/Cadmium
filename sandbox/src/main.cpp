@@ -8,7 +8,7 @@ int main()
 {
   try
   {
-    Cadmium::Engine engine("Cadmium — Asteroids", 1280, 720);
+    Cadmium::Engine engine("Cadmium - Asteroids", 1280, 720);
     engine.DisableDefaultBackground();
     engine.SetTargetFPS(60);
     engine.PushScene(std::make_unique<Sandbox::MenuScene>());

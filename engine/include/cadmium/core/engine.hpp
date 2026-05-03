@@ -3,6 +3,7 @@
 
 #include <cadmium/core/draw_command_queue.hpp>
 #include <cadmium/scripting/lua_bindings.hpp>
+#include <cadmium/assets/asset_manager.hpp>
 #include <cadmium/core/engine_context.hpp>
 #include <cadmium/core/scene_manager.hpp>
 #include <cadmium/core/input_manager.hpp>
@@ -59,6 +60,7 @@ namespace Cadmium
 
     TTF_Font* GetFont() override;
     DrawCommandQueue& GetDrawQueue() override;
+    AssetManager& GetAssets() override;
     sol::state& GetLua() override;
 
   private:
@@ -74,10 +76,11 @@ namespace Cadmium
     SDL_Window *m_Window{nullptr};
     SDL_Renderer *m_Renderer{nullptr};
     TTF_Font *m_Font{nullptr};
-    SDL_Texture *m_DefaultBackground{nullptr};
+    TextureHandle m_DefaultBackgroundHandle = k_InvalidHandle;
     ImGuiLayer m_ImGuiLayer{};
     InputManager m_Input{};
     DrawCommandQueue m_DrawQueue{};
+    AssetManager m_AssetManager;
     Lua::SceneBindingState m_SceneState{};
     sol::state m_Lua{};
 

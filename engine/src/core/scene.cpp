@@ -67,6 +67,10 @@ namespace Cadmium
   {
     return m_Context->GetDrawQueue();
   }
+  AssetManager &Scene::GetAssets()
+  {
+    return m_Context->GetAssets();
+  }
   sol::state &Scene::GetLua()
   {
     return m_Context->GetLua();

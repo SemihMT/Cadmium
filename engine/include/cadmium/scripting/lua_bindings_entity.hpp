@@ -108,14 +108,14 @@ namespace Cadmium::Lua
             return sol::make_object(lua, 0.f);
           return sol::make_object(lua, self.GetField(key));
       }
-      // Everything else — backing table
+      // Everything else - backing table
       return self.table[key];
     },
 
     // __newindex: intercept built-in fields, fall through to table for rest
     sol::meta_function::new_index, [](EntityHandle &self, const std::string &key, sol::object value)
     {
-      // Transform fields — always proxy to C++, never touch backing table
+      // Transform fields - always proxy to C++, never touch backing table
       if (k_TransformFields.count(key))
       {
         float v = 0.f;
@@ -125,7 +125,7 @@ namespace Cadmium::Lua
           v = (float)value.as<int>();
         else
         {
-          // Wrong type for a transform field — log and ignore
+          // Wrong type for a transform field - log and ignore
           SDL_Log("[Entity] '%s' requires a number, got %s",
                   key.c_str(), lua_typename(value.lua_state(), (int)value.get_type()));
           return;
@@ -134,13 +134,13 @@ namespace Cadmium::Lua
         return;
       }
 
-      // Engine-managed fields — do not write to fallback table
+      // Engine-managed fields - do not write to fallback table
       if (k_EngineFields.count(key))
       {
         return;
       }
 
-      // Everything else — backing table
+      // Everything else - backing table
       self.table[key] = value;
     },
 
@@ -184,7 +184,7 @@ namespace Cadmium::Lua
       // Build the handle
       EntityHandle handle{table, cppEntity, ecsReg};
 
-      // Wrap the handle as a sol object — this is what gets passed
+      // Wrap the handle as a sol object - this is what gets passed
       // as `self` to all hooks so __index/__newindex fire correctly
       sol::object handleObj = sol::make_object(*L, handle);
 

@@ -1,6 +1,7 @@
 #include "stress_debug_overlay.hpp"
 #include "components.hpp"
 #include <cadmium/ecs/world.hpp>
+#include <cadmium/editor/imgui_asset_panel.hpp>
 #include <cmath>
 #include <random>
 
@@ -14,7 +15,14 @@ namespace Sandbox
     return min + s_Dist(s_Rng) * (max - min);
   }
 
-  void StressDebugOverlay::OnAttach() {}
+  void StressDebugOverlay::OnAttach()
+  {
+
+#ifdef CADMIUM_IMGUI
+    m_AssetPanel.emplace(GetAssets());
+#endif
+
+  }
 
   void StressDebugOverlay::SpawnBatch(int count)
   {
@@ -79,6 +87,8 @@ namespace Sandbox
       Post(ReturnToMenuEvent{});
 
     ImGui::End();
+    if (m_AssetPanel)
+      m_AssetPanel->Render("Assets");
 #endif
   }
 

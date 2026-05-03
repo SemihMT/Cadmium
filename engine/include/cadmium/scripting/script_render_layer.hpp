@@ -1,6 +1,7 @@
 #ifndef CADMIUM_SCRIPT_RENDER_LAYER_HPP
 #define CADMIUM_SCRIPT_RENDER_LAYER_HPP
 #include <cadmium/core/draw_command_queue.hpp>
+#include <cadmium/assets/asset_manager.hpp>
 #include <cadmium/core/layer.hpp>
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
@@ -15,8 +16,8 @@ namespace Cadmium
 class ScriptRenderLayer : public Layer
 {
 public:
-    explicit ScriptRenderLayer(DrawCommandQueue& queue, TTF_Font* font)
-        : Layer("ScriptRenderLayer"), m_Queue(queue), m_Font(font) {}
+    explicit ScriptRenderLayer(DrawCommandQueue& queue, AssetManager& assetManager, TTF_Font* font)
+        : Layer("ScriptRenderLayer"), m_Queue(queue), m_Assets(assetManager), m_Font(font) {}
 
     void OnRender(SDL_Renderer* renderer) override
     {
@@ -32,6 +33,7 @@ public:
 
 private:
     DrawCommandQueue& m_Queue;
+    AssetManager& m_Assets;
     TTF_Font* m_Font{nullptr};
 
     // Camera state
@@ -83,7 +85,7 @@ private:
 
         if (c.filled)
         {
-            // Filled circle via horizontal scanlines — SDL has no fill circle
+            // Filled circle via horizontal scanlines - SDL has no fill circle
             // TODO: implement something more performant
             for (float dy = -sr; dy <= sr; dy += 1.f)
             {
@@ -162,14 +164,38 @@ private:
 
     void Execute(SDL_Renderer *r, const DrawCmd::Sprite &c)
     {
-      SDL_FRect placeholder{};
-      placeholder.h = c.h;
-      placeholder.w = c.w;
-      placeholder.x = c.x;
-      placeholder.y = c.y;
 
-      SDL_SetRenderDrawColor(r, 0xff, 0x00, 0xff, 0xff);
-      SDL_RenderRect(r,&placeholder);
+        SDL_Texture *tex = m_Assets.GetTexture(c.textureHandle);
+        if (!tex)
+            return;
+
+        float w = c.w, h = c.h;
+        if (w <= 0.f || h <= 0.f)
+            SDL_GetTextureSize(tex, &w, &h);
+
+        SDL_SetTextureColorModFloat(tex, c.color.r, c.color.g, c.color.b);
+        SDL_SetTextureAlphaModFloat(tex, c.color.a);
+
+        SDL_FRect dst{
+            ToScreenX(c.x),
+            ToScreenY(c.y),
+            w * m_CamZoom,
+            h * m_CamZoom};
+
+        if (c.rotation != 0.f)
+        {
+            SDL_RenderTextureRotated(r, tex, nullptr, &dst,
+                                     c.rotation, nullptr,
+                                     SDL_FLIP_NONE);
+        }
+        else
+        {
+            SDL_RenderTexture(r, tex, nullptr, &dst);
+        }
+
+        // Reset modulation so other textures aren't affected
+        SDL_SetTextureColorModFloat(tex, 1.f, 1.f, 1.f);
+        SDL_SetTextureAlphaModFloat(tex, 1.f);
     }
 
     void Execute(SDL_Renderer* r, const DrawCmd::SetCamera& c)

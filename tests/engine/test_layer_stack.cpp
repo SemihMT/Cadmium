@@ -2,6 +2,7 @@
 #include <cadmium/core/layer_stack.hpp>
 #include <cadmium/core/layer.hpp>
 #include <cadmium/core/engine_context.hpp>
+#include <cadmium/assets/asset_manager.hpp>
 #include <memory>
 #include <string>
 #include <vector>
@@ -44,6 +45,7 @@ namespace Cadmium
     void ReplaceScene(std::unique_ptr<Cadmium::Scene> scene) override {};
     TTF_Font* GetFont() override {};
     DrawCommandQueue& GetDrawQueue() override {};
+    AssetManager& GetAssets() override {};
     sol::state& GetLua() override {};
 
     bool quitRequested{false};

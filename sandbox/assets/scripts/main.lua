@@ -1,5 +1,5 @@
 -- assets/scripts/main.lua
--- Phase 2 validation — tests Entity.New, hooks, Transform proxy,
+-- Phase 2 validation - tests Entity.New, hooks, Transform proxy,
 -- Entity.Find, Entity.FindAll, Entity.Destroy
 
 -- ── Test 1: basic entity with transform proxy ─────────────────────────────
@@ -134,7 +134,7 @@ function OnEnter()
     local b = Entity.Find("Ball")
     if b then
         SDL_Log = SDL_Log or print
-        print("Entity.Find('Ball') OK — found at " .. b.x .. ", " .. b.y)
+        print("Entity.Find('Ball') OK - found at " .. b.x .. ", " .. b.y)
     else
         print("Entity.Find('Ball') FAILED")
     end

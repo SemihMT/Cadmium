@@ -25,6 +25,8 @@ namespace Cadmium
     if (!m_Renderer)
       throw std::runtime_error(SDL_GetError());
 
+    m_AssetManager.Init(m_Renderer);
+
     if(!TTF_Init())
       throw std::runtime_error(SDL_GetError());
 
@@ -48,7 +50,7 @@ namespace Cadmium
         sol::lib::math,
         sol::lib::table,
         sol::lib::string,
-        sol::lib::io,     // for file loading — restrict in sandbox build
+        sol::lib::io,     // for file loading - restrict in sandbox build
         sol::lib::os,     // TODO: Whitelist functionality to make os library access safe
         sol::lib::package // for require()
     );
@@ -58,8 +60,6 @@ namespace Cadmium
   Engine::~Engine()
   {
     m_ImGuiLayer.Shutdown();
-    if (m_DefaultBackground)
-      SDL_DestroyTexture(m_DefaultBackground);
     if (m_Font)
       TTF_CloseFont(m_Font);
     TTF_Quit();
@@ -159,10 +159,11 @@ namespace Cadmium
                            toUint8(m_ClearColor.a));
     SDL_RenderClear(m_Renderer);
 
-    if (m_UseDefaultBackground && m_DefaultBackground)
+    if (m_UseDefaultBackground)
     {
-      SDL_FRect dst{0, 0, static_cast<float>(m_Width), static_cast<float>(m_Height)};
-      SDL_RenderTexture(m_Renderer, m_DefaultBackground, nullptr, &dst);
+      SDL_Texture *bg = m_AssetManager.GetTexture(m_DefaultBackgroundHandle);
+      if (bg)
+        SDL_RenderTexture(m_Renderer, bg, nullptr, nullptr);
     }
 
     for (auto &layer : layerStack)
@@ -214,16 +215,10 @@ namespace Cadmium
   void Engine::TrySetDefaultBackground()
   {
     std::string bgPath = AssetPath("assets/Cadmium-bg.bmp");
-    SDL_Surface *surface = SDL_LoadBMP(bgPath.c_str());
-    if (surface)
-    {
-      m_DefaultBackground = SDL_CreateTextureFromSurface(m_Renderer, surface);
-      SDL_DestroySurface(surface);
-    }
-    else
-    {
+    m_DefaultBackgroundHandle = m_AssetManager.LoadTexture(bgPath);
+
+    if (m_DefaultBackgroundHandle == k_InvalidHandle)
       SDL_Log("Cadmium: default background not found at '%s'", bgPath.c_str());
-    }
   }
 
   void Engine::SetClearColor(float r, float g, float b, float a)
@@ -345,6 +340,10 @@ namespace Cadmium
     return m_DrawQueue;
   }
 
+  AssetManager &Engine::GetAssets()
+  {
+    return m_AssetManager;
+  }
   sol::state &Engine::GetLua()
   {
     return m_Lua;

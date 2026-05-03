@@ -5,6 +5,7 @@
 #include <SDL3/SDL.h>
 #ifdef CADMIUM_IMGUI
 #include <imgui.h>
+#include <cadmium/editor/imgui_asset_panel.hpp>
 #endif
 
 namespace Sandbox
@@ -23,6 +24,10 @@ namespace Sandbox
 
     int   m_BatchSize{1000};
     float m_Speed{200.0f};
+
+    #ifdef CADMIUM_IMGUI
+    std::optional<Cadmium::Editor::AssetPanel> m_AssetPanel;
+    #endif
   };
 
 } // namespace Sandbox

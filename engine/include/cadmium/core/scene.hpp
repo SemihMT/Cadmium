@@ -48,6 +48,7 @@ namespace Cadmium
     void PopOverlay(const std::string &name);
     TTF_Font* GetFont();
     DrawCommandQueue &GetDrawQueue();
+    AssetManager& GetAssets();
     sol::state& GetLua();
     template <typename T>
     void Post(const T &event)
