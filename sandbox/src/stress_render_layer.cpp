@@ -10,7 +10,7 @@ namespace Sandbox
 
     SDL_SetRenderDrawColor(renderer, 100, 200, 255, 255);
     for (auto& [entity, transform] : world.Query<Cadmium::Transform>())
-      SDL_RenderPoint(renderer, transform->x, transform->y);
+      SDL_RenderPoint(renderer, transform->position.x,transform->position.y);
   }
 
 } // namespace Sandbox

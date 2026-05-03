@@ -22,7 +22,6 @@
 
 namespace Cadmium
 {
-  /// @brief  Cadmium's brains, so to speak. Handles window creation, renderer, frame timing, scene creation etc
   class Engine : public IEngineContext
   {
   public:

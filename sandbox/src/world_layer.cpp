@@ -40,10 +40,7 @@ namespace Sandbox
         float angle = RandomFloat(0.0f, 2.0f * std::numbers::pi_v<float>);
         float speed = RandomFloat(30.0f, 120.0f);
 
-        world.AddComponent<Cadmium::Transform>(entity, {
-          .x = e.x,
-          .y = e.y
-        });
+        world.AddComponent<Cadmium::Transform>(entity, Cadmium::Transform::From2D(e.x, e.y, 0.f));
 
         world.AddComponent<Cadmium::Velocity>(entity, {
           .x = std::cos(angle) * speed,

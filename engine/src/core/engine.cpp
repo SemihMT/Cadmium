@@ -49,6 +49,7 @@ namespace Cadmium
         sol::lib::table,
         sol::lib::string,
         sol::lib::io,     // for file loading — restrict in sandbox build
+        sol::lib::os,     // TODO: Whitelist functionality to make os library access safe
         sol::lib::package // for require()
     );
     Lua::BindPhase1(m_Lua, m_Input, m_DrawQueue, m_SceneState);

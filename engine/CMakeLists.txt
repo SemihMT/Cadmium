@@ -23,8 +23,16 @@ target_link_libraries(cadmium-engine
         sol2::sol2
         SDL3_ttf::SDL3_ttf
         SDL3_image::SDL3_image
+        glm::glm
 
 )
+
+target_compile_definitions(cadmium-engine
+    PUBLIC
+        GLM_ENABLE_EXPERIMENTAL
+        GLM_FORCE_RADIANS
+        GLM_FORCE_DEPTH_ZERO_TO_ONE)
+
 if(EMSCRIPTEN)
     target_compile_definitions(cadmium-engine PUBLIC CADMIUM_PLATFORM_WEB)
 endif()

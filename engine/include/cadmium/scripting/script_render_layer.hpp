@@ -20,7 +20,6 @@ public:
 
     void OnRender(SDL_Renderer* renderer) override
     {
-        // Reset camera state for this frame
         m_CamX = 0.f; m_CamY = 0.f; m_CamZoom = 1.f;
 
         for (const auto& cmd : m_Queue.Commands())
@@ -35,7 +34,7 @@ private:
     DrawCommandQueue& m_Queue;
     TTF_Font* m_Font{nullptr};
 
-    // Camera state — reset each frame, modified by SetCamera commands
+    // Camera state
     float m_CamX    = 0.f;
     float m_CamY    = 0.f;
     float m_CamZoom = 1.f;
@@ -85,6 +84,7 @@ private:
         if (c.filled)
         {
             // Filled circle via horizontal scanlines — SDL has no fill circle
+            // TODO: implement something more performant
             for (float dy = -sr; dy <= sr; dy += 1.f)
             {
                 float dx = std::sqrt(sr * sr - dy * dy);
@@ -126,7 +126,7 @@ private:
     void Execute(SDL_Renderer *r, const DrawCmd::Text &c)
     {
         if (!m_Font)
-            return; // font not loaded yet, skip silently
+            return;
 
         SDL_Color sdlColor{
             (Uint8)(c.color.r * 255),

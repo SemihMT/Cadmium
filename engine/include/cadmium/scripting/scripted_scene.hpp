@@ -1,6 +1,7 @@
 #ifndef CADMIUM_SCRIPTED_SCENE_HPP
 #define CADMIUM_SCRIPTED_SCENE_HPP
 #include <cadmium/core/scene.hpp>
+#include <cadmium/scripting/entity_registry.hpp>
 #include <string>
 #include <sol/sol.hpp>
 
@@ -25,6 +26,7 @@ public:
 private:
     std::string m_ScriptPath{};
     sol::environment m_Env{};
+    EntityRegistry m_EntityRegistry;
 };
 
 } // namespace Cadmium

@@ -9,10 +9,7 @@ namespace Cadmium
   class World
   {
   public:
-    // -----------------------------------------------------------------------
-    // Lifecycle - called by Scene
-    // -----------------------------------------------------------------------
-
+    // Lifecycle
     void Start()
     {
       m_Scheduler.Start(m_Registry);
@@ -28,10 +25,7 @@ namespace Cadmium
       m_Scheduler.Stop(m_Registry);
     }
 
-    // -----------------------------------------------------------------------
     // Entity API - forwarded from Registry
-    // -----------------------------------------------------------------------
-
     Entity CreateEntity()                    { return m_Registry.CreateEntity(); }
     void   DestroyEntity(Entity e)           { m_Registry.DestroyEntity(e); }
     bool   IsValid(Entity e) const           { return m_Registry.IsValid(e); }
@@ -70,10 +64,7 @@ namespace Cadmium
       return m_Registry.QueryEntities<T, Rest...>();
     }
 
-    // -----------------------------------------------------------------------
     // System API - forwarded from Scheduler
-    // -----------------------------------------------------------------------
-
     template<typename T, typename... Args>
     T& RegisterSystem(int order, Args&&... args)
     {

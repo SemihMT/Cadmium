@@ -7,24 +7,16 @@
 
 namespace Cadmium
 {
-
-// Tracks per-frame keyboard and mouse state.
-// Must be updated exactly once per frame via BeginFrame() before SDL event
-// polling, and SnapshotPost() after polling. This gives correct JustPressed
-// and JustReleased deltas without any per-event bookkeeping.
 class InputManager
 {
 public:
-    // Call at the very start of Iterate(), before SDL_PollEvent.
     // Copies current state to previous state.
     void BeginFrame();
 
-    // Call after all SDL_PollEvent processing is done.
     // Snapshots the current SDL keyboard state into m_Current.
     void SnapshotPost();
 
     // Feed scroll events in from the engine's event loop.
-    // Call this inside your SDL_EVENT_MOUSE_WHEEL handler.
     void OnMouseWheel(float x, float y);
 
     // ── Keyboard ─────────────────────────────────────────────────────────

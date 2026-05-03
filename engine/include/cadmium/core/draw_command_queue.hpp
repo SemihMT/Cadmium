@@ -6,10 +6,6 @@
 
 namespace Cadmium
 {
-
-// ── Color ─────────────────────────────────────────────────────────────────
-// Plain struct. Lua Color.RGBA / Color.RGB / Color.Red etc. produce these.
-// All channels 0.0 - 1.0.
 struct Color
 {
     float r = 1.f, g = 1.f, b = 1.f, a = 1.f;
@@ -35,10 +31,6 @@ struct Color
         };
     }
 };
-
-// ── Draw commands ─────────────────────────────────────────────────────────
-// Each is a plain struct. No virtuals, no heap per command.
-// The queue holds a std::vector<DrawCommand> which is a variant of all types.
 
 namespace DrawCmd
 {
@@ -83,7 +75,7 @@ namespace DrawCmd
       float x, y;
       float w, h;     // 0 = use natural texture size
       float rotation; // degrees
-      Color color;    // tint, use Color::White for no tint
+      Color color;    // tint
     };
     struct SetCamera
     {
@@ -104,19 +96,17 @@ using DrawCommand = std::variant<
     DrawCmd::ResetCamera
 >;
 
-// ── DrawCommandQueue ──────────────────────────────────────────────────────
+
 // Scripts push commands here during OnRender().
 // ScriptRenderLayer drains and executes them via SDL.
-// Cleared at the end of each drain — never persists across frames.
+// Cleared at the end of each drain
 class DrawCommandQueue
 {
 public:
     void Push(DrawCommand cmd) { m_Commands.push_back(std::move(cmd)); }
 
-    // Returns commands for draining. Called by ScriptRenderLayer.
     const std::vector<DrawCommand>& Commands() const { return m_Commands; }
 
-    // Called by ScriptRenderLayer after draining.
     void Clear() { m_Commands.clear(); }
 
     bool Empty() const { return m_Commands.empty(); }

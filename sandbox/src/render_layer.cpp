@@ -33,7 +33,7 @@ namespace Sandbox
       Uint8 a = static_cast<Uint8>(debris->alpha * 255);
 
       SDL_SetRenderDrawColor(renderer, r, g, b, a);
-      DrawCircle(renderer, transform->x, transform->y, debris->radius, 6);
+      DrawCircle(renderer, transform->position.x, transform->position.y, debris->radius, 6);
     }
   }
 

@@ -71,6 +71,8 @@ namespace Cadmium
     }
 
     // Iteration - cache friendly, iterates dense array
+    // Provide const + non-const overloads so the container works in both
+    // mutable and read-only contexts (const objects return const_iterators)
     auto begin()       { return m_Data.begin(); }
     auto end()         { return m_Data.end(); }
     auto begin() const { return m_Data.begin(); }

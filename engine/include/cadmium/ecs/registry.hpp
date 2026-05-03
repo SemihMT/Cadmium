@@ -16,10 +16,7 @@ namespace Cadmium
   class Registry
   {
   public:
-    // -----------------------------------------------------------------------
     // Entity lifecycle
-    // -----------------------------------------------------------------------
-
     Entity CreateEntity()
     {
       uint32_t index;
@@ -69,10 +66,7 @@ namespace Cadmium
       return EntityGeneration(entity) == m_Generations[index];
     }
 
-    // -----------------------------------------------------------------------
     // Component management
-    // -----------------------------------------------------------------------
-
     template<typename T>
     void AddComponent(Entity entity, T component)
     {
@@ -140,10 +134,7 @@ namespace Cadmium
       return &GetComponent<T>(entity);
     }
 
-    // -----------------------------------------------------------------------
     // Query - returns pairs of (Entity, T&) for all entities with T
-    // -----------------------------------------------------------------------
-
     template<typename T>
     std::vector<std::pair<Entity, T*>> Query()
     {

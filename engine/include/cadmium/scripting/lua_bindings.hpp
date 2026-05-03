@@ -5,7 +5,6 @@
 #include <sol/sol.hpp>
 #include <string>
 
-// Forward declare so we don't pull in the full engine header here
 namespace Cadmium
 {
   class IEngineContext;
@@ -35,7 +34,7 @@ namespace Cadmium::Lua
 
   // ── Color ─────────────────────────────────────────────────────────────────
   // Exposed as a Lua table of constants + constructor functions.
-  // Color values are plain Lua tables {r, g, b, a} — no userdata needed.
+  // Color values are plain Lua tables {r, g, b, a} - no userdata needed.
   // Draw functions accept anything with r/g/b/a fields.
   inline void BindColor(sol::state &lua)
   {
@@ -109,7 +108,7 @@ namespace Cadmium::Lua
   {
     sol::table tbl = lua.create_named_table("Input");
     sol::state *L = &lua;
-    InputManager *inp = &input; // same pattern — pointer instead of reference capture
+    InputManager *inp = &input;
 
     tbl.set_function("IsKeyDown", [inp](const std::string &name)
                      { return inp->IsKeyDown(InputManager::ScancodeFromName(name)); });
@@ -153,11 +152,11 @@ namespace Cadmium::Lua
 
   // ── Draw ──────────────────────────────────────────────────────────────────
   // All functions push to the DrawCommandQueue.
-  // Executed later by ScriptRenderLayer — scripts never touch SDL directly.
+  // Executed later by ScriptRenderLayer - scripts never touch SDL directly.
   inline void BindDraw(sol::state &lua, DrawCommandQueue &queue)
   {
     sol::table tbl = lua.create_named_table("Draw");
-    DrawCommandQueue *q = &queue; // pointer capture
+    DrawCommandQueue *q = &queue;
 
     auto toColor = [](sol::table t) -> Color
     {
@@ -229,7 +228,7 @@ namespace Cadmium::Lua
   // ── Scene ─────────────────────────────────────────────────────────────────
   // Width and Height are updated each frame from the engine context.
   // Time and DeltaTime are updated each frame from the engine loop.
-  // Scripts read these as plain values — no function call needed.
+  // Scripts read these as plain values - no function call needed.
   struct SceneBindingState
   {
     float Width = 1280.f;
@@ -242,18 +241,12 @@ namespace Cadmium::Lua
   {
     sol::table tbl = lua.create_named_table("Scene");
 
-    // These are updated from C++ each frame via the state struct.
-    // Lua reads them as plain table fields.
     tbl["Width"] = state.Width;
     tbl["Height"] = state.Height;
     tbl["Time"] = state.Time;
     tbl["DeltaTime"] = state.DeltaTime;
-
-    // Called by the engine each frame to keep values current.
-    // Not exposed to Lua.
   }
 
-  // Call this every frame to keep Scene.Width/Height/Time/DeltaTime current.
   inline void UpdateSceneBindings(sol::state &lua, const SceneBindingState &state)
   {
     sol::table tbl = lua["Scene"];
@@ -264,6 +257,7 @@ namespace Cadmium::Lua
   }
 
   // ── vec2 / vec3 ───────────────────────────────────────────────────────────
+  // TODO: Replace with glm types
   inline void BindMathTypes(sol::state &lua)
   {
     // vec2

@@ -19,14 +19,14 @@ namespace Sandbox
         auto& transform = registry.GetComponent<Cadmium::Transform>(entity);
         auto& velocity  = registry.GetComponent<Cadmium::Velocity>(entity);
 
-        transform.x += velocity.x * dt;
-        transform.y += velocity.y * dt;
+        transform.position.x += velocity.x * dt;
+        transform.position.y += velocity.y * dt;
 
         // Wrap around screen
-        if (transform.x < 0.0f)    transform.x += width;
-        if (transform.x > width)   transform.x -= width;
-        if (transform.y < 0.0f)    transform.y += height;
-        if (transform.y > height)  transform.y -= height;
+        if (transform.position.x < 0.0f)    transform.position.x += width;
+        if (transform.position.x > width)   transform.position.x -= width;
+        if (transform.position.y < 0.0f)    transform.position.y += height;
+        if (transform.position.y > height)  transform.position.y -= height;
       }
     }
 

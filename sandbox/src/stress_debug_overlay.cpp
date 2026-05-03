@@ -28,11 +28,7 @@ namespace Sandbox
 
       float angle = RandomFloat(0.0f, 2.0f * 3.14159f);
 
-      world.AddComponent<Cadmium::Transform>(entity, {
-        .x        = RandomFloat(0.0f, width),
-        .y        = RandomFloat(0.0f, height),
-        .rotation = 0.0f
-      });
+      world.AddComponent<Cadmium::Transform>(entity, Cadmium::Transform::From2D(RandomFloat(0.0f, width), RandomFloat(0.0f, height), 0.f));
 
       world.AddComponent<Cadmium::Velocity>(entity, {
         .x = std::cos(angle) * m_Speed,

@@ -14,7 +14,6 @@ void InputManager::BeginFrame()
     m_PrevMouseX    = m_MouseX;
     m_PrevMouseY    = m_MouseY;
 
-    // Reset scroll — it accumulates from wheel events this frame
     m_ScrollX = 0.f;
     m_ScrollY = 0.f;
 }
@@ -95,8 +94,6 @@ bool InputManager::IsMouseJustReleased(int button) const
 
 SDL_Scancode InputManager::ScancodeFromName(const std::string& name)
 {
-    // SDL provides this — it handles "W", "Space", "Left", "Up", etc.
-    // SDL_GetScancodeFromName is case-insensitive.
     SDL_Scancode sc = SDL_GetScancodeFromName(name.c_str());
     return sc; // Returns SDL_SCANCODE_UNKNOWN if not found
 }

@@ -54,7 +54,7 @@ namespace Cadmium
 
     scene->SetContext(context);
     m_Stack.push_back(std::move(scene));
-    m_Stack.back()->GetWorld().Start(); // start world before OnEnter
+    m_Stack.back()->GetWorld().Start();
     m_Stack.back()->OnEnter();
   }
 
@@ -63,7 +63,7 @@ namespace Cadmium
     if (m_Stack.empty())
       return;
 
-    m_Stack.back()->GetWorld().Stop(); // stop world before OnDestroy
+    m_Stack.back()->GetWorld().Stop();
     m_Stack.back()->OnDestroy();
     m_Stack.pop_back();
 

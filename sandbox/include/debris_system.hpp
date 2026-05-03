@@ -1,4 +1,3 @@
-// sandbox/debris_system.hpp
 #pragma once
 
 #include <cadmium/ecs/system.hpp>
@@ -20,8 +19,8 @@ namespace Sandbox
         auto& velocity  = registry.GetComponent<Cadmium::Velocity>(entity);
         auto& debris    = registry.GetComponent<Debris>(entity);
 
-        transform.x += velocity.x * dt;
-        transform.y += velocity.y * dt;
+        transform.position.x += velocity.x * dt;
+        transform.position.y += velocity.y * dt;
 
         debris.lifetime -= dt;
         debris.alpha     = std::max(0.0f, debris.lifetime / 2.0f);
