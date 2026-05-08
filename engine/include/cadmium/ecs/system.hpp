@@ -5,14 +5,15 @@
 
 namespace Cadmium
 {
+  class World;
   class System
   {
   public:
     virtual ~System() = default;
 
-    virtual void OnStart(Registry&)           {}
-    virtual void OnUpdate(Registry&, float dt) = 0;
-    virtual void OnStop(Registry&)            {}
+    virtual void OnStart(World&)           {}
+    virtual void OnUpdate(World&, float dt) = 0;
+    virtual void OnStop(World&)            {}
 
     int GetOrder() const { return m_Order; }
 

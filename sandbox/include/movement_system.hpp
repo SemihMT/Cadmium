@@ -8,16 +8,16 @@ namespace Sandbox
   class MovementSystem : public Cadmium::System
   {
   public:
-    void OnUpdate(Cadmium::Registry& registry, float dt) override
+    void OnUpdate(Cadmium::World& world, float dt) override
     {
       float width  = static_cast<float>(m_Width);
       float height = static_cast<float>(m_Height);
 
-      for (auto entity : registry.QueryEntities<Cadmium::Transform,
+      for (auto entity : world.QueryEntities<Cadmium::Transform,
                                                 Cadmium::Velocity>())
       {
-        auto& transform = registry.GetComponent<Cadmium::Transform>(entity);
-        auto& velocity  = registry.GetComponent<Cadmium::Velocity>(entity);
+        auto& transform = world.GetComponent<Cadmium::Transform>(entity);
+        auto& velocity  = world.GetComponent<Cadmium::Velocity>(entity);
 
         transform.position.x += velocity.x * dt;
         transform.position.y += velocity.y * dt;

@@ -9,15 +9,15 @@ namespace Sandbox
   class DebrisSystem : public Cadmium::System
   {
   public:
-    void OnUpdate(Cadmium::Registry& registry, float dt) override
+    void OnUpdate(Cadmium::World& world, float dt) override
     {
-      for (auto entity : registry.QueryEntities<Cadmium::Transform,
+      for (auto entity : world.QueryEntities<Cadmium::Transform,
                                                 Cadmium::Velocity,
                                                 Debris>())
       {
-        auto& transform = registry.GetComponent<Cadmium::Transform>(entity);
-        auto& velocity  = registry.GetComponent<Cadmium::Velocity>(entity);
-        auto& debris    = registry.GetComponent<Debris>(entity);
+        auto& transform = world.GetComponent<Cadmium::Transform>(entity);
+        auto& velocity  = world.GetComponent<Cadmium::Velocity>(entity);
+        auto& debris    = world.GetComponent<Debris>(entity);
 
         transform.position.x += velocity.x * dt;
         transform.position.y += velocity.y * dt;
@@ -26,7 +26,7 @@ namespace Sandbox
         debris.alpha     = std::max(0.0f, debris.lifetime / 2.0f);
 
         if (debris.lifetime <= 0.0f)
-          registry.DestroyEntity(entity);
+          world.DestroyEntity(entity);
       }
     }
   };

@@ -98,11 +98,9 @@ namespace Cadmium
         }
       }
 
-      // End of render - safe to remove destroyed entities
-      m_Registry.FlushDestroyed();
+      m_Registry.FlushDestroyed(GetWorld());
     }
 
-    // ── OnEvent ───────────────────────────────────────────────────────────
     void OnEvent(SDL_Event &event) override
     {
       sol::table evtTable = BuildEventTable(event);

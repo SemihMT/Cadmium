@@ -38,7 +38,7 @@ namespace Cadmium
       }
     }
 
-    void FlushDestroyed()
+    void FlushDestroyed(World& world)
     {
       if (m_PendingDestroy.empty())
         return;
@@ -52,6 +52,7 @@ namespace Cadmium
           continue;
 
         Entry &entry = m_Entities[idx];
+        world.RemoveAllLuaComponents(entry.cppEntity);
 
         sol::protected_function onDetach = entry.table["OnDetach"];
         if (onDetach.valid())

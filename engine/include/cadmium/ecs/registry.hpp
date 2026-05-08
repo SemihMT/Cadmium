@@ -3,6 +3,8 @@
 
 #include <cadmium/ecs/entity.hpp>
 #include <cadmium/ecs/sparse_set.hpp>
+#include <cadmium/ecs/component_id.hpp>
+#include <cadmium/ecs/lua_component.hpp>
 #include <unordered_map>
 #include <typeindex>
 #include <memory>
@@ -19,8 +21,8 @@ namespace Cadmium
     // Entity lifecycle
     Entity CreateEntity()
     {
-      uint32_t index;
-      uint32_t generation;
+      uint32_t index{};
+      uint32_t generation{};
 
       if (!m_FreeList.empty())
       {
@@ -47,7 +49,7 @@ namespace Cadmium
       uint32_t index = EntityIndex(entity);
 
       // Remove all components for this entity
-      for (auto& [type, set] : m_Sets)
+      for (auto& [id, set] : m_Sets)
         set->Remove(index);
 
       // Increment generation to invalidate existing IDs
@@ -61,8 +63,11 @@ namespace Cadmium
     bool IsValid(Entity entity) const
     {
       if (entity == k_NullEntity) return false;
+
       uint32_t index = EntityIndex(entity);
+
       if (index >= m_Generations.size()) return false;
+
       return EntityGeneration(entity) == m_Generations[index];
     }
 
@@ -82,11 +87,19 @@ namespace Cadmium
     {
       if (!IsValid(entity)) return;
 
-      auto it = m_Sets.find(typeid(T));
-      if (it == m_Sets.end()) return;
-
-      it->second->Remove(EntityIndex(entity));
+      auto it = m_Sets.find(GetComponentID<T>());
+      if (it != m_Sets.end())
+            it->second->Remove(EntityIndex(entity));
     }
+
+    template<typename T>
+    bool HasComponent(Entity entity) const
+    {
+        if (!IsValid(entity)) return false;
+        auto it = m_Sets.find(GetComponentID<T>());
+        return it != m_Sets.end() && it->second->Has(EntityIndex(entity));
+    }
+
 
     template<typename T>
     T& GetComponent(Entity entity)
@@ -94,12 +107,11 @@ namespace Cadmium
       if (!IsValid(entity))
         throw std::runtime_error("GetComponent called on invalid entity");
 
-      auto it = m_Sets.find(typeid(T));
+      auto it = m_Sets.find(GetComponentID<T>());
       if (it == m_Sets.end())
         throw std::runtime_error("Component type not found");
 
-      return static_cast<SparseSet<T>*>(it->second.get())
-               ->Get(EntityIndex(entity));
+      return static_cast<SparseSet<T>*>(it->second.get())->Get(EntityIndex(entity));
     }
 
     template<typename T>
@@ -108,23 +120,12 @@ namespace Cadmium
       if (!IsValid(entity))
         throw std::runtime_error("GetComponent called on invalid entity");
 
-      auto it = m_Sets.find(typeid(T));
+      auto it = m_Sets.find(GetComponentID<T>());
       if (it == m_Sets.end())
         throw std::runtime_error("Component type not found");
 
       return static_cast<const SparseSet<T>*>(it->second.get())
                ->Get(EntityIndex(entity));
-    }
-
-    template<typename T>
-    bool HasComponent(Entity entity) const
-    {
-      if (!IsValid(entity)) return false;
-
-      auto it = m_Sets.find(typeid(T));
-      if (it == m_Sets.end()) return false;
-
-      return it->second->Has(EntityIndex(entity));
     }
 
     template<typename T>
@@ -140,20 +141,12 @@ namespace Cadmium
     {
       std::vector<std::pair<Entity, T*>> result;
 
-      auto it = m_Sets.find(typeid(T));
+      auto it = m_Sets.find(GetComponentID<T>());
       if (it == m_Sets.end()) return result;
 
       auto* set = static_cast<SparseSet<T>*>(it->second.get());
-      const auto& dense = set->GetDense();
-
-      result.reserve(dense.size());
-      for (size_t i = 0; i < dense.size(); i++)
-      {
-        uint32_t index  = dense[i];
-        Entity   entity = MakeEntity(index, m_Generations[index]);
-        result.emplace_back(entity, &set->Get(index));
-      }
-
+      for (uint32_t index : set->GetDense())
+        result.emplace_back(MakeEntity(index, m_Generations[index]), &set->Get(index));
       return result;
     }
 
@@ -163,7 +156,7 @@ namespace Cadmium
     {
       std::vector<Entity> result;
 
-      auto it = m_Sets.find(typeid(T));
+      auto it = m_Sets.find(GetComponentID<T>());
       if (it == m_Sets.end()) return result;
 
       auto* set = static_cast<SparseSet<T>*>(it->second.get());
@@ -177,25 +170,95 @@ namespace Cadmium
       return result;
     }
 
+     void AddLuaComponent(Entity entity, ComponentID id, LuaComponentData data)
+    {
+        if (!IsValid(entity))
+            throw std::runtime_error("AddLuaComponent on invalid entity");
+        GetOrCreateLuaSet(id).Add(EntityIndex(entity), std::move(data));
+    }
+
+    void RemoveLuaComponent(Entity entity, ComponentID id)
+    {
+        if (!IsValid(entity)) return;
+        auto it = m_Sets.find(id);
+        if (it != m_Sets.end())
+            it->second->Remove(EntityIndex(entity));
+    }
+
+    bool HasLuaComponent(Entity entity, ComponentID id) const
+    {
+        if (!IsValid(entity)) return false;
+        auto it = m_Sets.find(id);
+        return it != m_Sets.end() && it->second->Has(EntityIndex(entity));
+    }
+
+    LuaComponentData* TryGetLuaComponent(Entity entity, ComponentID id)
+    {
+        if (!IsValid(entity)) return nullptr;
+        auto it = m_Sets.find(id);
+        if (it == m_Sets.end()) return nullptr;
+        auto* set = static_cast<SparseSet<LuaComponentData>*>(it->second.get());
+        if (!set->Has(EntityIndex(entity))) return nullptr;
+        return &set->Get(EntityIndex(entity));
+    }
+
+    std::vector<std::pair<Entity, LuaComponentData*>> QueryLua(ComponentID id)
+    {
+        std::vector<std::pair<Entity, LuaComponentData*>> result;
+        auto it = m_Sets.find(id);
+        if (it == m_Sets.end()) return result;
+
+        auto* set = static_cast<SparseSet<LuaComponentData>*>(it->second.get());
+        for (uint32_t index : set->GetDense())
+            result.emplace_back(MakeEntity(index, m_Generations[index]), &set->Get(index));
+        return result;
+    }
+
+    // Remove all Lua components for an entity across all registered Lua IDs.
+    // Called by EntityRegistry::FlushDestroyed - not DestroyEntity, because
+    // Lua entity lifetime is managed separately from C++ entity lifetime.
+    void RemoveAllLuaComponents(Entity entity, const std::vector<ComponentID>& luaIDs)
+    {
+        if (!IsValid(entity)) return;
+        uint32_t index = EntityIndex(entity);
+        for (ComponentID id : luaIDs)
+        {
+            auto it = m_Sets.find(id);
+            if (it != m_Sets.end())
+                it->second->Remove(index);
+        }
+    }
+
     size_t EntityCount() const { return m_Generations.size() - m_FreeList.size(); }
 
   private:
     template<typename T>
     SparseSet<T>& GetOrCreateSet()
     {
-      auto type = std::type_index(typeid(T));
-      auto it   = m_Sets.find(type);
+      ComponentID id = GetComponentID<T>();
+      auto it   = m_Sets.find(id);
 
       if (it == m_Sets.end())
       {
-        auto result = m_Sets.emplace(type, std::make_unique<SparseSet<T>>());
-        return *static_cast<SparseSet<T> *>(result.first->second.get());
+        auto [inserted, _] = m_Sets.emplace(id, std::make_unique<SparseSet<T>>());
+        return *static_cast<SparseSet<T>*>(inserted->second.get());
       }
 
       return *static_cast<SparseSet<T>*>(it->second.get());
     }
 
-    std::unordered_map<std::type_index,
+    SparseSet<LuaComponentData>& GetOrCreateLuaSet(ComponentID id)
+    {
+        auto it = m_Sets.find(id);
+        if (it == m_Sets.end())
+        {
+            auto [inserted, _] = m_Sets.emplace(id, std::make_unique<SparseSet<LuaComponentData>>());
+            return *static_cast<SparseSet<LuaComponentData>*>(inserted->second.get());
+        }
+        return *static_cast<SparseSet<LuaComponentData>*>(it->second.get());
+    }
+
+    std::unordered_map<ComponentID,
                        std::unique_ptr<ISparseSet>> m_Sets;
     std::vector<uint32_t>                           m_Generations;
     std::queue<uint32_t>                            m_FreeList;

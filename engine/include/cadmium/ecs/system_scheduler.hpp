@@ -57,13 +57,13 @@ namespace Cadmium
     }
 
     template<typename T>
-    void UnregisterSystem(Registry& registry)
+    void UnregisterSystem(World& world)
     {
       auto type = std::type_index(typeid(T));
       auto it   = m_Index.find(type);
       if (it == m_Index.end()) return;
 
-      it->second->OnStop(registry);
+      it->second->OnStop(world);
       m_Index.erase(it);
 
       m_Systems.erase(
@@ -75,23 +75,23 @@ namespace Cadmium
         m_Systems.end());
     }
 
-    void Start(Registry& registry)
+    void Start(World& world)
     {
       for (auto& system : m_Systems)
-        system->OnStart(registry);
+        system->OnStart(world);
     }
 
-    void Update(Registry& registry, float dt)
+    void Update(World& world, float dt)
     {
       for (auto& system : m_Systems)
-        system->OnUpdate(registry, dt);
+        system->OnUpdate(world, dt);
     }
 
-    void Stop(Registry& registry)
+    void Stop(World& world)
     {
       // Stop in reverse order
       for (auto it = m_Systems.rbegin(); it != m_Systems.rend(); ++it)
-        (*it)->OnStop(registry);
+        (*it)->OnStop(world);
     }
 
   private:
