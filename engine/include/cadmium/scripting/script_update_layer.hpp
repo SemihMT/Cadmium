@@ -18,7 +18,7 @@ namespace Cadmium
     {
     }
 
-    // ── OnUpdate ──────────────────────────────────────────────────────────
+    //  OnUpdate
     void OnUpdate(float dt) override
     {
       CallEnvHook("OnUpdate", dt);
@@ -43,7 +43,7 @@ namespace Cadmium
       }
     }
 
-    // ── OnFixedUpdate ─────────────────────────────────────────────────────
+    //  OnFixedUpdate
     void OnFixedUpdate(float dt) override
     {
       CallEnvHook("OnFixedUpdate", dt);
@@ -68,7 +68,7 @@ namespace Cadmium
       }
     }
 
-    // ── OnRender ──────────────────────────────────────────────────────────
+    //  OnRender
     // Note: OnRender on entities only pushes to DrawCommandQueue.
     // ScriptRenderLayer drains it. Ordering is guaranteed by layer stack.
     void OnRender(SDL_Renderer *) override
@@ -128,7 +128,7 @@ namespace Cadmium
     sol::environment &m_Env;
     EntityRegistry &m_Registry;
 
-    // ── Scene-level hook helpers ──────────────────────────────────────────
+    //  Scene-level hook helpers
 
     void CallEnvHook(const std::string &name)
     {
@@ -156,7 +156,7 @@ namespace Cadmium
       }
     }
 
-    // ── Event table builder ───────────────────────────────────────────────
+    //  Event table builder
     // Converts SDL_Event to a plain Lua table.
     // Returns an invalid table if the event type is not exposed to scripts.
     sol::table BuildEventTable(SDL_Event &event)

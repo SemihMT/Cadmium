@@ -19,7 +19,7 @@ void AssetManager::Init(SDL_Renderer *renderer)
   m_Renderer = renderer;
 }
 
-// ── Project root ──────────────────────────────────────────────────────────
+//  Project root
 
 void AssetManager::SetProjectRoot(const std::string &root)
 {
@@ -36,7 +36,7 @@ std::string AssetManager::ResolvePath(const std::string& relativePath) const
     return resolved.string();
 }
 
-// ── Loading ───────────────────────────────────────────────────────────────
+//  Loading
 
 TextureHandle AssetManager::LoadTexture(const std::string& path)
 {
@@ -101,7 +101,7 @@ FontHandle AssetManager::LoadFont(const std::string& path, int size)
     return handle;
 }
 
-// ── Retrieval ─────────────────────────────────────────────────────────────
+//  Retrieval
 
 SDL_Texture* AssetManager::GetTexture(TextureHandle handle) const
 {
@@ -117,7 +117,7 @@ TTF_Font* AssetManager::GetFont(FontHandle handle) const
     return it != m_Fonts.end() ? it->second : nullptr;
 }
 
-// ── Unloading ─────────────────────────────────────────────────────────────
+//  Unloading
 
 void AssetManager::UnloadTexture(TextureHandle handle)
 {
@@ -194,7 +194,7 @@ void AssetManager::UnloadAll()
         entry.loaded = false;
 }
 
-// ── File discovery ────────────────────────────────────────────────────────
+//  File discovery
 
 void AssetManager::ScanProjectFiles()
 {
@@ -275,7 +275,7 @@ TextureHandle AssetManager::GetPreviewHandle(const std::string& path)
     return LoadTexture(path);
 }
 
-// ── Internal ──────────────────────────────────────────────────────────────
+//  Internal
 
 void AssetManager::UpdateEntry(const std::string& relativePath,
                                 AssetType type,

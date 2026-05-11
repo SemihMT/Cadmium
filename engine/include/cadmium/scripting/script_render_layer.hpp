@@ -50,7 +50,7 @@ private:
         SDL_SetRenderDrawColorFloat(r, c.r, c.g, c.b, c.a);
     }
 
-    // ── Command executors ─────────────────────────────────────────────────
+    //  Command executors
 
     void Execute(SDL_Renderer* r, const DrawCmd::Line& c)
     {

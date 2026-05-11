@@ -16,7 +16,7 @@ namespace Cadmium
     glm::quat rotation{1.f, 0.f, 0.f, 0.f}; // identity quaternion
     glm::vec3 scale{1.f, 1.f, 1.f};
 
-    // ── Convenience: position ─────────────────────────────────────────────
+    //  Convenience: position
     float GetX() const { return position.x; }
     float GetY() const { return position.y; }
     float GetZ() const { return position.z; }
@@ -25,7 +25,7 @@ namespace Cadmium
     void SetY(float v) { position.y = v; }
     void SetZ(float v) { position.z = v; }
 
-    // ── Convenience: scale ────────────────────────────────────────────────
+    //  Convenience: scale
     float GetScaleX() const { return scale.x; }
     float GetScaleY() const { return scale.y; }
     float GetScaleZ() const { return scale.z; }
@@ -34,7 +34,7 @@ namespace Cadmium
     void SetScaleY(float v) { scale.y = v; }
     void SetScaleZ(float v) { scale.z = v; }
 
-    // ── Convenience: Euler angles in degrees ──────────────────────────────
+    //  Convenience: Euler angles in degrees
     // These convert to/from the quaternion on every call.
     // Use them for scripting and editor display, not in hot loops.
 
@@ -70,12 +70,12 @@ namespace Cadmium
       rotation = glm::quat(euler);
     }
 
-    // ── Convenience: 2D rotation alias ───────────────────────────────────
+    //  Convenience: 2D rotation alias
     // Maps to rotationZ - the only rotation axis used in 2D
     float GetRotation() const { return GetRotationZ(); }
     void SetRotation(float d) { SetRotationZ(d); }
 
-    // ── Convenience: 2D transform factory ──────────────────────────────────
+    //  Convenience: 2D transform factory
     static Transform From2D(float x, float y, float rotationDegZ = 0.f,
                             float scaleX = 1.f, float scaleY = 1.f) {
         Transform t;
@@ -85,7 +85,7 @@ namespace Cadmium
         return t;
     }
 
-    // ── Quaternion direct access ───────────────────────────────────────────
+    //  Quaternion direct access
     const glm::quat &GetQuaternion() const { return rotation; }
     void SetQuaternion(const glm::quat &q) { rotation = glm::normalize(q); }
 
@@ -96,7 +96,7 @@ namespace Cadmium
           glm::angleAxis(glm::radians(deg), glm::normalize(axis)) * rotation);
     }
 
-    // ── Matrix ────────────────────────────────────────────────────────────
+    //  Matrix
     // TRS matrix - used by renderer and physics
     glm::mat4 GetMatrix() const
     {

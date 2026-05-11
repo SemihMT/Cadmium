@@ -50,7 +50,7 @@ void InputManager::OnMouseWheel(float x, float y)
     m_ScrollY += y;
 }
 
-// ── Keyboard ──────────────────────────────────────────────────────────────
+//  Keyboard
 
 bool InputManager::IsKeyDown(SDL_Scancode sc) const
 {
@@ -70,7 +70,7 @@ bool InputManager::IsKeyJustReleased(SDL_Scancode sc) const
     return !m_Current[sc] && m_Previous[sc];
 }
 
-// ── Mouse ─────────────────────────────────────────────────────────────────
+//  Mouse
 
 bool InputManager::IsMouseDown(int button) const
 {
@@ -90,7 +90,7 @@ bool InputManager::IsMouseJustReleased(int button) const
     return !m_MouseCurrent[button] && m_MousePrevious[button];
 }
 
-// ── Scancode name lookup ──────────────────────────────────────────────────
+//  Scancode name lookup
 
 SDL_Scancode InputManager::ScancodeFromName(const std::string& name)
 {

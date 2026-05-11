@@ -19,7 +19,7 @@ public:
     // Feed scroll events in from the engine's event loop.
     void OnMouseWheel(float x, float y);
 
-    // ── Keyboard ─────────────────────────────────────────────────────────
+    //  Keyboard
 
     // True every frame the key is held.
     bool IsKeyDown(SDL_Scancode sc) const;
@@ -30,14 +30,14 @@ public:
     // True only on the frame the key transitioned from down to up.
     bool IsKeyJustReleased(SDL_Scancode sc) const;
 
-    // ── Mouse buttons ─────────────────────────────────────────────────────
+    //  Mouse buttons
 
     // button: 1=left, 2=middle, 3=right
     bool IsMouseDown(int button) const;
     bool IsMouseJustPressed(int button) const;
     bool IsMouseJustReleased(int button) const;
 
-    // ── Mouse position and movement ───────────────────────────────────────
+    //  Mouse position and movement
 
     float MouseX() const { return m_MouseX; }
     float MouseY() const { return m_MouseY; }

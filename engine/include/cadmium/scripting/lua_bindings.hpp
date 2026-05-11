@@ -13,7 +13,7 @@ namespace Cadmium
 namespace Cadmium::Lua
 {
 
-  // ── Math extensions ───────────────────────────────────────────────────────
+  //  Math extensions
   // Injected into Lua's existing math table.
   inline void BindMathExtensions(sol::state &lua)
   {
@@ -32,7 +32,7 @@ namespace Cadmium::Lua
                       { return std::round(v); });
   }
 
-  // ── Color ─────────────────────────────────────────────────────────────────
+  //  Color
   // Exposed as a Lua table of constants + constructor functions.
   // Color values are plain Lua tables {r, g, b, a} - no userdata needed.
   // Draw functions accept anything with r/g/b/a fields.
@@ -103,7 +103,7 @@ namespace Cadmium::Lua
         return c; });
   }
 
-  // ── Input ─────────────────────────────────────────────────────────────────
+  //  Input
   inline void BindInput(sol::state &lua, InputManager &input)
   {
     sol::table tbl = lua.create_named_table("Input");
@@ -150,7 +150,7 @@ namespace Cadmium::Lua
         return t; });
   }
 
-  // ── Draw ──────────────────────────────────────────────────────────────────
+  //  Draw
   // All functions push to the DrawCommandQueue.
   // Executed later by ScriptRenderLayer - scripts never touch SDL directly.
   inline void BindDraw(sol::state &lua, DrawCommandQueue &queue)
@@ -238,7 +238,7 @@ namespace Cadmium::Lua
     tbl.set_function("ResetCamera", [q]()
                      { q->Push(DrawCmd::ResetCamera{}); });
   }
-  // ── Scene ─────────────────────────────────────────────────────────────────
+  //  Scene
   // Width and Height are updated each frame from the engine context.
   // Time and DeltaTime are updated each frame from the engine loop.
   // Scripts read these as plain values - no function call needed.
@@ -269,7 +269,7 @@ namespace Cadmium::Lua
     tbl["DeltaTime"] = state.DeltaTime;
   }
 
-  // ── vec2 / vec3 ───────────────────────────────────────────────────────────
+  //  vec2 / vec3
   // TODO: Replace with glm types
   inline void BindMathTypes(sol::state &lua)
   {
@@ -339,7 +339,7 @@ namespace Cadmium::Lua
             return std::sqrt(dx*dx+dy*dy+dz*dz); });
   }
 
-  // ── BindAll ───────────────────────────────────────────────────────────────
+  //  BindAll
   // Call once after opening Lua libraries.
   inline void BindPhase1(sol::state &lua,
                          InputManager &input,
