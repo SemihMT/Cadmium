@@ -1,5 +1,6 @@
 #include <cadmium/core/engine.hpp>
 #include <cadmium/core/assets.hpp>
+#include <cadmium/core/logger.hpp>
 #include <stdexcept>
 #include <algorithm>
 
@@ -13,6 +14,8 @@ namespace Cadmium
   Engine::Engine(const char *title, int width, int height)
       : m_Width{width}, m_Height{height}
   {
+    Cadmium::AddStdoutSink();
+    Cadmium::Log::Info("Engine", "Initializing engine!");
 
     if (!SDL_Init(SDL_INIT_VIDEO))
       throw std::runtime_error(SDL_GetError());

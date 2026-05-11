@@ -1,6 +1,7 @@
 #ifndef CADMIUM_WORLD_HPP
 #define CADMIUM_WORLD_HPP
 
+#include <cadmium/core/logger.hpp>
 #include <cadmium/ecs/registry.hpp>
 #include <cadmium/ecs/system_scheduler.hpp>
 #include <cadmium/scripting/lua_type_registry.hpp>
@@ -83,7 +84,7 @@ namespace Cadmium
       const LuaComponentSchema *schema = m_LuaTypes.Find(typeName);
       if (!schema)
       {
-        SDL_Log("[World] Unknown Lua component type: %s", typeName.c_str());
+        Cadmium::Log::Warn("World", "Unknown Lua component type: {}", typeName.c_str());
         return;
       }
 
@@ -92,7 +93,7 @@ namespace Cadmium
       {
         if (!data.values.contains(field))
         {
-          SDL_Log("[World] Unknown field '%s' on '%s'", field.c_str(), typeName.c_str());
+          Cadmium::Log::Warn("World", "Unknown field '{}' on '{}'", field.c_str(), typeName.c_str());
           continue;
         }
         // Variant index must match - enforced at binding layer
