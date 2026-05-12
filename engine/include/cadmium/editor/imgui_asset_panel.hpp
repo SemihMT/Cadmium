@@ -290,6 +290,8 @@ private:
         const char* label;
         switch (type)
         {
+            case AssetType::Texture:
+                bgColor = IM_COL32(20,  100,  200,  200); label = "TEX"; break;
             case AssetType::Script:
                 bgColor = IM_COL32(40,  80,  40,  200); label = "LUA"; break;
             case AssetType::Font:
@@ -340,6 +342,11 @@ private:
             ImGui::Text("Handle: %u", entry.handle);
         }
 
+        if (entry.type == AssetType::Script && entry.loaded)
+        {
+            ImGui::Text("Handle: %u", entry.handle);
+        }
+
         ImGui::EndTooltip();
     }
 
@@ -360,6 +367,8 @@ private:
                     m_Assets.LoadTexture(entry.path);
                 else if (entry.type == AssetType::Font)
                     m_Assets.LoadFont(entry.path, 16);
+                else if (entry.type == AssetType::Script)
+                    m_Assets.LoadScript(entry.path);
             }
         }
         else
@@ -370,6 +379,8 @@ private:
                     m_Assets.UnloadTexture(entry.handle);
                 else if (entry.type == AssetType::Font)
                     m_Assets.UnloadFont(entry.handle);
+                else if (entry.type == AssetType::Script)
+                    m_Assets.UnloadScript(entry.handle);
             }
         }
 
