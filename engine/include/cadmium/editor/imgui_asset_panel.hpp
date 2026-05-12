@@ -9,7 +9,7 @@
 namespace Cadmium::Editor
 {
 
-// ── AssetPanel ────────────────────────────────────────────────────────────
+//  AssetPanel
 // ImGui panel that displays all project assets organised by type.
 // Shows texture thumbnails, file metadata, and load status.
 // Calls an optional callback when an asset is double-clicked -
@@ -32,7 +32,7 @@ public:
     {
         ImGui::Begin(windowName);
 
-        // ── Toolbar ───────────────────────────────────────────────────────
+        //  Toolbar
         if (ImGui::Button("Refresh"))
             m_Assets.Refresh();
 
@@ -57,7 +57,7 @@ public:
 
         ImGui::Separator();
 
-        // ── Filter bar ────────────────────────────────────────────────────
+        //  Filter bar
         ImGui::SetNextItemWidth(-1);
         ImGui::InputTextWithHint("##filter", "Filter assets...",
                                   m_FilterBuf, sizeof(m_FilterBuf));
@@ -65,7 +65,7 @@ public:
 
         ImGui::Spacing();
 
-        // ── Asset list ────────────────────────────────────────────────────
+        //  Asset list
         const auto& entries = m_Assets.GetAllEntries();
 
         if (entries.empty())
@@ -140,7 +140,7 @@ private:
     char           m_FilterBuf[128] {};
     std::string    m_Selected;   // currently selected path
 
-    // ── List view ─────────────────────────────────────────────────────────
+    //  List view
     void RenderList(const std::vector<const AssetEntry*>& entries)
     {
         for (const AssetEntry* entry : entries)
@@ -178,7 +178,7 @@ private:
         }
     }
 
-    // ── Grid view ─────────────────────────────────────────────────────────
+    //  Grid view
     void RenderGrid(const std::vector<const AssetEntry*>& entries)
     {
         float thumbF    = (float)m_ThumbnailSize;
@@ -278,12 +278,7 @@ private:
             }
         }
 
-        // End any partial row
-        if (col > 0)
-            ImGui::NewLine();
-    }
-
-    // ── Type placeholder ──────────────────────────────────────────────────
+    //  Type placeholder
     void RenderPlaceholder(float size, AssetType type)
     {
         ImVec2 pos  = ImGui::GetCursorScreenPos();
@@ -320,7 +315,7 @@ private:
         ImGui::Dummy(ImVec2(size, size));
     }
 
-    // ── Tooltip ───────────────────────────────────────────────────────────
+    //  Tooltip
     void RenderTooltip(const AssetEntry& entry)
     {
         ImGui::BeginTooltip();
@@ -348,7 +343,7 @@ private:
         ImGui::EndTooltip();
     }
 
-    // ── Context menu ──────────────────────────────────────────────────────
+    //  Context menu
     void RenderContextMenu(const AssetEntry& entry)
     {
         std::string menuId = "ctx_" + entry.path;
@@ -394,7 +389,7 @@ private:
         ImGui::EndPopup();
     }
 
-    // ── Utilities ─────────────────────────────────────────────────────────
+    //  Utilities
     static std::string TruncateFilename(const std::string& name, int maxChars)
     {
         if (maxChars < 4) maxChars = 4;

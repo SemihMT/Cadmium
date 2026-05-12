@@ -6,7 +6,7 @@
 
   namespace Cadmium
   {
-    // ── Handle types ──────────────────────────────────────────────────────────
+    //  Handle types
     // Opaque integer handles. 0 is always invalid.
     // Scripts store and pass these around - they never inspect the value.
 
@@ -16,7 +16,7 @@
 
     static constexpr uint32_t k_InvalidHandle = 0;
 
-    // ── Asset metadata ────────────────────────────────────────────────────────
+    //  Asset metadata
     // Stored alongside each loaded asset. Used by the asset panel.
 
     enum class AssetType
