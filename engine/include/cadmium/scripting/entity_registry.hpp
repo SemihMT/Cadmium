@@ -48,11 +48,9 @@ namespace Cadmium
 
       for (size_t idx : m_PendingDestroy)
       {
-        if (idx >= m_Entities.size())
-          continue;
-
         Entry &entry = m_Entities[idx];
         world.RemoveAllLuaComponents(entry.cppEntity);
+        world.DestroyEntity(entry.cppEntity);
 
         sol::protected_function onDetach = entry.table["OnDetach"];
         if (onDetach.valid())
@@ -119,13 +117,15 @@ namespace Cadmium
 
     const std::vector<Entry> &All() const { return m_Entities; }
 
-    void Clear()
+    void Clear(World& world)
     {
       for (auto &entry : m_Entities)
       {
         sol::protected_function onDetach = entry.table["OnDetach"];
         if (onDetach.valid())
           onDetach(entry.handle);
+
+        world.DestroyEntity(entry.cppEntity);
       }
       m_Entities.clear();
       m_PendingDestroy.clear();
