@@ -4,6 +4,7 @@
 #include <SDL3_ttf/SDL_ttf.h>
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -101,6 +102,36 @@ FontHandle AssetManager::LoadFont(const std::string& path, int size)
     return handle;
 }
 
+ScriptHandle AssetManager::LoadScript(const std::string &path)
+{
+  auto it = m_ScriptPathIndex.find(path);
+    if (it != m_ScriptPathIndex.end())
+        return it->second;
+
+    std::string fullPath = ResolvePath(path);
+
+    // Read source text from disk
+    std::ifstream file(fullPath);
+    if (!file.is_open())
+    {
+        SDL_Log("[AssetManager] Failed to open script '%s'", path.c_str());
+        return k_InvalidHandle;
+    }
+
+    std::ostringstream oss;
+    oss << file.rdbuf();
+    std::string source = oss.str();
+
+    ScriptHandle handle = NextHandle();
+    m_ScriptPathIndex[path] = handle;
+    m_Scripts[handle]       = source;
+
+    UpdateEntry(path, AssetType::Script, handle);
+
+    SDL_Log("[AssetManager] Loaded script '%s' → handle %u", path.c_str(), handle);
+
+    return handle;
+}
 //  Retrieval
 
 SDL_Texture* AssetManager::GetTexture(TextureHandle handle) const
@@ -115,6 +146,14 @@ TTF_Font* AssetManager::GetFont(FontHandle handle) const
     if (handle == k_InvalidHandle) return nullptr;
     auto it = m_Fonts.find(handle);
     return it != m_Fonts.end() ? it->second : nullptr;
+}
+
+const std::string *AssetManager::GetScriptSource(ScriptHandle handle) const
+{
+    if (handle == k_InvalidHandle)
+        return nullptr;
+    auto it = m_Scripts.find(handle);
+    return it != m_Scripts.end() ? &it->second : nullptr;
 }
 
 //  Unloading
@@ -177,6 +216,34 @@ void AssetManager::UnloadFont(FontHandle handle)
     }
 }
 
+void AssetManager::UnloadScript(ScriptHandle handle)
+{
+    auto it = m_Scripts.find(handle);
+    if (it == m_Scripts.end())
+        return;
+
+    m_Scripts.erase(it);
+
+    for (auto pit = m_ScriptPathIndex.begin();
+         pit != m_ScriptPathIndex.end(); ++pit)
+    {
+        if (pit->second == handle)
+        {
+            m_ScriptPathIndex.erase(pit);
+            break;
+        }
+    }
+
+    for (auto &entry : m_Entries)
+    {
+        if (entry.handle == handle)
+        {
+            entry.loaded = false;
+            break;
+        }
+    }
+}
+
 void AssetManager::UnloadAll()
 {
     for (auto& [handle, texture] : m_Textures)
@@ -188,6 +255,9 @@ void AssetManager::UnloadAll()
         TTF_CloseFont(font);
     m_Fonts.clear();
     m_FontPathIndex.clear();
+
+    m_Scripts.clear();
+    m_ScriptPathIndex.clear();
 
     // Mark all entries as unloaded but keep them for display
     for (auto& entry : m_Entries)

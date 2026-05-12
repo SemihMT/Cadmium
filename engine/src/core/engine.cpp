@@ -16,6 +16,7 @@ namespace Cadmium
   {
     Cadmium::AddStdoutSink();
     Cadmium::Log::Info("Engine", "Initializing engine!");
+    m_AssetManager.SetProjectRoot(AssetPath("assets/"));
 
     if (!SDL_Init(SDL_INIT_VIDEO))
       throw std::runtime_error(SDL_GetError());

@@ -45,6 +45,7 @@ public:
 
     TextureHandle LoadTexture(const std::string& path);
     FontHandle    LoadFont(const std::string& path, int size);
+    ScriptHandle  LoadScript(const std::string& path);
     // SoundHandle LoadSound(const std::string& path); // phase 4
 
     // Retrieval:
@@ -53,10 +54,12 @@ public:
 
     SDL_Texture* GetTexture(TextureHandle handle) const;
     TTF_Font*    GetFont(FontHandle handle) const;
+    const std::string* GetScriptSource(ScriptHandle handle) const;
 
     // Unloading
     void UnloadTexture(TextureHandle handle);
     void UnloadFont(FontHandle handle);
+    void UnloadScript(ScriptHandle handle);
     void UnloadAll();
 
     // File discovery:
@@ -92,6 +95,10 @@ private:
     // Fonts are keyed by path+size - same file at different sizes = different handle
     std::unordered_map<std::string, FontHandle>    m_FontPathIndex;
     std::unordered_map<FontHandle, TTF_Font*>      m_Fonts;
+
+    // Script storage:
+    std::unordered_map<std::string, ScriptHandle>  m_ScriptPathIndex;
+    std::unordered_map<ScriptHandle, std::string>  m_Scripts;
 
     // Asset entries (for panel display)
     std::vector<AssetEntry> m_Entries;

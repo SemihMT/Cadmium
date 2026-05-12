@@ -13,6 +13,7 @@
     using TextureHandle = uint32_t;
     using FontHandle = uint32_t;
     using SoundHandle = uint32_t; // reserved for audio phase
+    using ScriptHandle = uint32_t;
 
     static constexpr uint32_t k_InvalidHandle = 0;
 
