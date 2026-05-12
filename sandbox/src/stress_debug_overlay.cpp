@@ -4,6 +4,7 @@
 #include <cadmium/editor/imgui_asset_panel.hpp>
 #include <cmath>
 #include <random>
+#include <cadmium/core/assets.hpp>
 
 namespace Sandbox
 {
@@ -19,7 +20,9 @@ namespace Sandbox
   {
 
 #ifdef CADMIUM_IMGUI
-    m_AssetPanel.emplace(GetAssets());
+    auto& assets = GetAssets();
+    assets.SetProjectRoot(Cadmium::AssetPath("assets/"));
+    m_AssetPanel.emplace(assets);
 #endif
 
   }
@@ -88,7 +91,9 @@ namespace Sandbox
 
     ImGui::End();
     if (m_AssetPanel)
+    {
       m_AssetPanel->Render("Assets");
+    }
 #endif
   }
 

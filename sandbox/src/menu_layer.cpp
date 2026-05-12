@@ -54,8 +54,12 @@ namespace Sandbox
 
     ImGui::Spacing();
     ImGui::SetCursorPosX((w - buttonW) * 0.5f);
-    if (ImGui::Button("Lua Scripting", { buttonW, buttonH }))
-      ReplaceScene(std::make_unique<Cadmium::ScriptedScene>("assets/scripts/main.lua"));
+    if (ImGui::Button("Lua Scripting", {buttonW, buttonH}))
+    {
+      auto scene = Cadmium::ScriptedScene::FromFile("assets/scripts/main.lua");
+      scene->EnableEditor(GetAssets());
+      ReplaceScene(std::move(scene));
+    }
 
     ImGui::Spacing();
     ImGui::Spacing();
