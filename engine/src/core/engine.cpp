@@ -2,6 +2,7 @@
 #include <cadmium/core/assets.hpp>
 #include <cadmium/core/logger.hpp>
 #include <cadmium/scripting/lua_bindings_entity.hpp>
+#include <cadmium/scripting/lua_bindings_assets.hpp>
 #include <cadmium/scripting/lua_bindings_components.hpp>
 #include <stdexcept>
 #include <algorithm>
@@ -62,6 +63,7 @@ namespace Cadmium
     );
     Lua::BindAll(m_Lua, m_Input, m_DrawQueue, m_SceneState);
     Lua::RegisterEntityTypes(m_Lua);
+    Lua::BindAssets(m_Lua, m_AssetManager);
     Lua::RegisterComponentTypes(m_Lua);
   }
 

@@ -1,141 +1,154 @@
--- assets/scripts/main.lua
--- Phase 2 validation - tests Entity.New, hooks, Transform proxy,
--- Entity.Find, Entity.FindAll, Entity.Destroy
+-- demo_scene.lua
+-- A small arcade-style shooter: move the player ship, dodge/shoot barrels.
+-- Demonstrates Entity, Component, Draw, Input, Assets, Scene, vec2.
 
--- ── Test 1: basic entity with transform proxy ─────────────────────────────
-local ball = Entity.New("Ball")
-ball.x      = Scene.Width / 2
-ball.y      = Scene.Height / 2
-ball.vx     = 220
-ball.vy     = 160
-ball.radius = 24
-ball.color  = Color.Red
-ball.tag    = "ball"
+local SCREEN_W = Scene.Width
+local SCREEN_H = Scene.Height
 
-function ball:OnUpdate(dt)
-    -- Transform proxy writes go directly to C++ Transform
-    self.x = self.x + self.vx * dt
-    self.y = self.y + self.vy * dt
+--  Assets
+local playerTex = Assets.LoadTexture("sprites/ship.png")
+local enemyTex  = Assets.LoadTexture("sprites/barrel.png")
 
-    -- Bounce
-    if self.x - self.radius < 0 then
-        self.x  = self.radius
-        self.vx = math.abs(self.vx)
-    elseif self.x + self.radius > Scene.Width then
-        self.x  = Scene.Width - self.radius
-        self.vx = -math.abs(self.vx)
+--  Components
+Component.Register("Health", {
+    hp    = 100.0,
+    maxHp = 100.0,
+    alive = true
+})
+
+--  Player
+local Player = Entity.New("Player")
+Player.tag = "Player"
+Player.x   = SCREEN_W / 2
+Player.y   = SCREEN_H - 80
+Component.Add(Player, "Health", { hp = 100, maxHp = 100 })
+
+function Player:OnUpdate(dt)
+    local speed = 300
+
+    if Input.IsKeyDown("Left")  or Input.IsKeyDown("A") then
+        self.x = self.x - speed * dt
+    end
+    if Input.IsKeyDown("Right") or Input.IsKeyDown("D") then
+        self.x = self.x + speed * dt
+    end
+    if Input.IsKeyDown("Up")    or Input.IsKeyDown("W") then
+        self.y = self.y - speed * dt
+    end
+    if Input.IsKeyDown("Down")  or Input.IsKeyDown("S") then
+        self.y = self.y + speed * dt
     end
 
-    if self.y - self.radius < 0 then
-        self.y  = self.radius
-        self.vy = math.abs(self.vy)
-    elseif self.y + self.radius > Scene.Height then
-        self.y  = Scene.Height - self.radius
-        self.vy = -math.abs(self.vy)
+    -- Clamp inside the screen
+    self.x = math.clamp(self.x, 20, SCREEN_W - 20)
+    self.y = math.clamp(self.y, 20, SCREEN_H - 20)
+
+    -- Death check
+    local hp = Component.Get(self, "Health")
+    if hp and hp.hp <= 0 then
+        hp.alive = false
+        Entity.Destroy(self)
     end
 
-    -- Press Space to randomise
-    if Input.IsKeyJustPressed("Space") then
-        self.vx    = math.random(-300, 300)
-        self.vy    = math.random(-200, 200)
-        self.color = Color.RGBA(math.random(), math.random(), math.random(), 1)
+    -- Collision with enemies
+    local enemies = Entity.FindAll("Enemy")
+    for _, enemy in ipairs(enemies) do
+        local dx   = self.x - enemy.x
+        local dy   = self.y - enemy.y
+        local dist = math.sqrt(dx * dx + dy * dy)
+        if dist < 30 then
+            local eHp = Component.Get(enemy, "Health")
+            if eHp then eHp.hp = 0 end
+
+            local pHp = Component.Get(self, "Health")
+            if pHp then pHp.hp = pHp.hp - 15 end
+        end
     end
 end
 
-function ball:OnRender()
-    Draw.FilledCircle(self.x, self.y, self.radius, self.color)
-    Draw.Circle(self.x, self.y, self.radius + 2, Color.White)
+function Player:OnRender()
+    if not Assets.IsValid(playerTex) then
+        Draw.FilledRect(self.x - 20, self.y - 20, 40, 40, Color.Magenta)
+    else
+        Draw.Sprite(playerTex, self.x, self.y, 40, 40, 0.0, Color.White)
+    end
 end
 
--- ── Test 2: multiple entities, FindAll, Destroy ───────────────────────────
-local function MakeDot(x, y)
-    local d = Entity.New()
-    d.x      = x
-    d.y      = y
-    d.vy     = 30 + math.random() * 60
-    d.life   = 2 + math.random() * 2
-    d.color  = Color.RGBA(math.random(), math.random(), 1, 1)
-    d.tag    = "dot"
+--  Enemy factory
+local function SpawnBarrel()
+    local e = Entity.New()
+    e.tag = "Enemy"
+    e.x   = math.random(50, SCREEN_W - 50)
+    e.y   = -30
+    Component.Add(e, "Health", { hp = 30, maxHp = 30 })
 
-    function d:OnUpdate(dt)
-        self.y    = self.y + self.vy * dt
-        self.life = self.life - dt
+    function e:OnUpdate(dt)
+        self.y = self.y + 120 * dt
 
-        if self.life <= 0 then
+        -- Respawn at top when off bottom
+        if self.y > SCREEN_H + 30 then
+            self.y = -30
+            self.x = math.random(50, SCREEN_W - 50)
+        end
+
+        -- Death check
+        local hp = Component.Get(self, "Health")
+        if hp and hp.hp <= 0 then
             Entity.Destroy(self)
         end
     end
 
-    function d:OnRender()
-        local alpha = math.max(0, self.life / 3)
-        Draw.FilledCircle(self.x, self.y, 5,
-            Color.RGBA(self.color.r, self.color.g, self.color.b, alpha))
+    function e:OnRender()
+        if not Assets.IsValid(enemyTex) then
+            Draw.FilledRect(self.x - 16, self.y - 16, 32, 32, Color.Red)
+        else
+            Draw.Sprite(enemyTex, self.x, self.y, 32, 32, 0.0, Color.White)
+        end
     end
-
-    return d
 end
 
--- Spawn dots periodically
-local spawnTimer = 0
-local spawnRate  = 0.15  -- seconds between spawns
+--  Scene OnUpdate
+local spawnTimer    = 0
+local spawnInterval = 1.5
 
--- ── Test 3: Entity.Find ───────────────────────────────────────────────────
-local function MakeHUD()
-    local hud = Entity.New("HUD")
-
-    function hud:OnUpdate(dt)
-        -- Test Entity.Find
-        local b = Entity.Find("Ball")
-        if b then
-            self.ballX = b.x
-            self.ballY = b.y
-        end
-
-        -- Test Entity.FindAll
-        local dots = Entity.FindAll("dot")
-        self.dotCount = #dots
-    end
-
-    function hud:OnRender()
-        Draw.Text("Phase 2 validation", 10, 10, 16, Color.White)
-        Draw.Text("Space: randomise ball", 10, 30, 14, Color.Gray(0.7))
-        Draw.Text("Entities: " .. Entity.Count(), 10, 50, 14, Color.Yellow)
-
-        if self.dotCount then
-            Draw.Text("Dots: " .. self.dotCount, 10, 70, 14, Color.Cyan)
-        end
-
-        if self.ballX then
-            Draw.Text(
-                string.format("Ball: %.0f, %.0f", self.ballX, self.ballY),
-                10, 90, 14, Color.Gray(0.7)
-            )
-        end
-    end
-
-    return hud
-end
-
-local hud = MakeHUD()
-
--- ── Scene-level OnUpdate for spawning ────────────────────────────────────
 function OnUpdate(dt)
     spawnTimer = spawnTimer + dt
-    if spawnTimer >= spawnRate then
-        spawnTimer = 0
-        MakeDot(math.random(50, Scene.Width - 50), 0)
+    if spawnTimer > spawnInterval then
+        spawnTimer = spawnTimer - spawnInterval
+        SpawnBarrel()
     end
 end
 
--- ── Scene-level OnEnter ───────────────────────────────────────────────────
+--  Scene OnRender
+function OnRender()
+    -- Background
+    Draw.FilledRect(0, 0, SCREEN_W, SCREEN_H, Color.Gray(0.1))
+
+    -- HUD: player health
+    local hpComp = Component.Get(Player, "Health")
+    if hpComp then
+        local hp = math.floor(hpComp.hp)
+        Draw.Text("HP: " .. hp, 10, 10, 24, Color.White)
+    end
+
+    -- Entity count
+    Draw.Text("Entities: " .. Entity.Count(), 10, 40, 18, Color.Gray(0.7))
+end
+
+--  Scene OnFixedUpdate
+function OnFixedUpdate(dt)
+
+    if Input.IsKeyJustPressed("Space") then
+        print("Space just pressed!")
+        local enemies = Entity.FindAll("Enemy")
+
+        for _, e in ipairs(enemies) do
+            Entity.Destroy(e)
+        end
+    end
+end
+
+--  Scene OnEnter
 function OnEnter()
     math.randomseed(os.time())
-    -- Verify Entity.Find works at startup
-    local b = Entity.Find("Ball")
-    if b then
-        SDL_Log = SDL_Log or print
-        print("Entity.Find('Ball') OK - found at " .. b.x .. ", " .. b.y)
-    else
-        print("Entity.Find('Ball') FAILED")
-    end
 end
