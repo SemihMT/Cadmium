@@ -206,11 +206,6 @@ namespace Cadmium
 
         if (delayMS > 0)
           SDL_Delay(delayMS);
-
-        while ((SDL_GetPerformanceCounter() - frameStart) < targetTicks)
-        {
-          // busy wait for sub-millisecond precision
-        }
       }
     }
 #ifdef CADMIUM_PLATFORM_WEB
