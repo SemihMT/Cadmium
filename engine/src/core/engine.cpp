@@ -1,6 +1,8 @@
 #include <cadmium/core/engine.hpp>
 #include <cadmium/core/assets.hpp>
 #include <cadmium/core/logger.hpp>
+#include <cadmium/scripting/lua_bindings_entity.hpp>
+#include <cadmium/scripting/lua_bindings_components.hpp>
 #include <stdexcept>
 #include <algorithm>
 
@@ -58,7 +60,9 @@ namespace Cadmium
         sol::lib::os,     // TODO: Whitelist functionality to make os library access safe
         sol::lib::package // for require()
     );
-    Lua::BindPhase1(m_Lua, m_Input, m_DrawQueue, m_SceneState);
+    Lua::BindAll(m_Lua, m_Input, m_DrawQueue, m_SceneState);
+    Lua::RegisterEntityTypes(m_Lua);
+    Lua::RegisterComponentTypes(m_Lua);
   }
 
   Engine::~Engine()

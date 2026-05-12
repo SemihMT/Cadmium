@@ -45,6 +45,7 @@ namespace Cadmium
     void PushLayer(std::unique_ptr<Layer> layer);
     void PushOverlay(std::unique_ptr<Layer> layer);
     void PopLayer(const std::string &name);
+    void PopLayerImmediate(const std::string& name); // Skips the deferred pop request. Only for internal engine use.
     void PopOverlay(const std::string &name);
     TTF_Font* GetFont();
     DrawCommandQueue &GetDrawQueue();

@@ -2,7 +2,7 @@
 #define CADMIUM_SCRIPTING_LUA_BINDINGS_COMPONENTS_HPP
 
 #pragma once
-#include <cadmium/scripting/lua_component.hpp>
+#include <cadmium/ecs/lua_component.hpp>
 #include <cadmium/ecs/world.hpp>
 #include <sol/sol.hpp>
 #include <SDL3/SDL.h>
@@ -19,66 +19,12 @@ namespace Cadmium::Lua
     std::string typeName;   // for error messages
   };
 
+  void RegisterComponentTypes(sol::state &lua);
+
+
   inline void BindComponents(sol::state &lua, World &world)
   {
     World *w = &world;
-
-    lua.new_usertype<LuaComponentProxy>("LuaComponentProxy", sol::no_constructor,
-
-    sol::meta_function::index, [](LuaComponentProxy &self, const std::string &key, sol::this_state s) -> sol::object
-    {
-      sol::state_view L(s);
-      if (!self.data) return sol::nil;
-      auto it = self.data->values.find(key);
-      if (it == self.data->values.end()) return sol::nil;
-      return std::visit([&](const auto& v) {
-          return sol::make_object(L, v);
-      }, it->second);
-    },
-
-    sol::meta_function::new_index, [](LuaComponentProxy &self, const std::string &key, sol::object value)
-    {
-      if (!self.data || !self.data->schema) return;
-
-      auto fieldIt = self.data->schema->fields.find(key);
-      if (fieldIt == self.data->schema->fields.end())
-      {
-          SDL_Log("[Component] Unknown field '%s' on '%s'",
-                  key.c_str(), self.typeName.c_str());
-          return;
-      }
-
-      // Bool must be checked before float
-      switch (fieldIt->second.type)
-      {
-      case LuaFieldType::Float:
-          if (value.is<float>())
-              self.data->values[key] = value.as<float>();
-          else if (value.is<int>())
-              self.data->values[key] = (float)value.as<int>();
-          else
-              SDL_Log("[Component] '%s' expects float", key.c_str());
-          break;
-      case LuaFieldType::Bool:
-          if (value.is<bool>())
-              self.data->values[key] = value.as<bool>();
-          else
-              SDL_Log("[Component] '%s' expects bool", key.c_str());
-          break;
-      case LuaFieldType::String:
-          if (value.is<std::string>())
-              self.data->values[key] = value.as<std::string>();
-          else
-              SDL_Log("[Component] '%s' expects string", key.c_str());
-          break;
-      }
-    },
-
-    sol::meta_function::to_string, [](const LuaComponentProxy &self)
-    {
-      return "LuaComponent(" + self.typeName + ")";
-    });
-
 
     sol::table comp = lua.create_named_table("Component");
 

@@ -341,7 +341,7 @@ namespace Cadmium::Lua
 
   //  BindAll
   // Call once after opening Lua libraries.
-  inline void BindPhase1(sol::state &lua,
+  inline void BindAll(sol::state &lua,
                          InputManager &input,
                          DrawCommandQueue &queue,
                          SceneBindingState &scene)

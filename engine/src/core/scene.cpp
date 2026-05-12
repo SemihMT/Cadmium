@@ -55,6 +55,10 @@ namespace Cadmium
   {
     m_LayerStack.RequestPopLayer(name);
   }
+  void Scene::PopLayerImmediate(const std::string &name)
+  {
+    m_LayerStack.PopLayer(name);
+  }
   void Scene::PopOverlay(const std::string &name)
   {
     m_LayerStack.RequestPopOverlay(name);

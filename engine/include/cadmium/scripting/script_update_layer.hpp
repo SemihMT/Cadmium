@@ -21,6 +21,7 @@ namespace Cadmium
     //  OnUpdate
     void OnUpdate(float dt) override
     {
+      if (m_Paused) return;
       CallEnvHook("OnUpdate", dt);
 
       for (const auto &entry : m_Registry.All())
@@ -46,6 +47,7 @@ namespace Cadmium
     //  OnFixedUpdate
     void OnFixedUpdate(float dt) override
     {
+      if (m_Paused) return;
       CallEnvHook("OnFixedUpdate", dt);
 
       for (const auto &entry : m_Registry.All())
@@ -73,6 +75,7 @@ namespace Cadmium
     // ScriptRenderLayer drains it. Ordering is guaranteed by layer stack.
     void OnRender(SDL_Renderer *) override
     {
+      if (m_Paused) return; // maybe not necessary?
       CallEnvHook("OnRender");
 
       for (const auto &entry : m_Registry.All())
@@ -103,6 +106,7 @@ namespace Cadmium
 
     void OnEvent(SDL_Event &event) override
     {
+      if (m_Paused) return;
       sol::table evtTable = BuildEventTable(event);
       if (!evtTable.valid())
         return;
@@ -124,10 +128,12 @@ namespace Cadmium
       }
     }
 
+    void SetPaused(bool paused) { m_Paused = paused; }
+
   private:
     sol::environment &m_Env;
     EntityRegistry &m_Registry;
-
+    bool m_Paused{false};
     //  Scene-level hook helpers
 
     void CallEnvHook(const std::string &name)
