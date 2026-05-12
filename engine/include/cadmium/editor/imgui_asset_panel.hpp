@@ -180,57 +180,79 @@ private:
     }
 
     //  Grid view
-    void RenderGrid(const std::vector<const AssetEntry*>& entries)
+    void RenderGrid(const std::vector<const AssetEntry *> &entries)
     {
-        float thumbF    = (float)m_ThumbnailSize;
-        float cellSize  = thumbF + 16.f;  // padding
-        float panelW    = ImGui::GetContentRegionAvail().x;
-        int   columns   = std::max(1, (int)(panelW / cellSize));
+        float thumbF = (float)m_ThumbnailSize;
+        float spacing = ImGui::GetStyle().ItemSpacing.x;
+        float textH = ImGui::GetTextLineHeightWithSpacing();
 
-        int col = 0;
-        for (const AssetEntry* entry : entries)
+        // Full width of one grid item
+        float cellSize = thumbF + spacing;
+
+        float panelW = ImGui::GetContentRegionAvail().x;
+        int columns = std::max(1, (int)(panelW / cellSize));
+
+        int i = 0;
+
+        for (const AssetEntry *entry : entries)
         {
-            bool isSelected = (m_Selected == entry->path);
-
             ImGui::PushID(entry->path.c_str());
 
-            // Cell background highlight if selected
+            bool isSelected = (m_Selected == entry->path);
+
+            // Entire cell region
+            ImVec2 cellStart = ImGui::GetCursorScreenPos();
+
+            // Selection background
             if (isSelected)
             {
-                ImVec2 pos = ImGui::GetCursorScreenPos();
                 ImGui::GetWindowDrawList()->AddRectFilled(
-                    pos,
-                    ImVec2(pos.x + thumbF + 8.f, pos.y + thumbF + 24.f),
+                    cellStart,
+                    ImVec2(
+                        cellStart.x + thumbF,
+                        cellStart.y + thumbF + textH + 6.f),
                     IM_COL32(60, 100, 180, 120),
                     4.f);
             }
 
-            // Thumbnail
+            //
+            // THUMBNAIL REGION
+            //
+
+            ImGui::BeginGroup();
+
             if (entry->type == AssetType::Texture && entry->loaded)
             {
-                SDL_Texture* tex = m_Assets.GetTexture(entry->handle);
+                SDL_Texture *tex = m_Assets.GetTexture(entry->handle);
+
                 if (tex)
                 {
-                    // ImGui expects ImTextureID - cast SDL_Texture*
-                    ImTextureID imTex = (ImTextureID)(intptr_t)tex;
-
-                    // Maintain aspect ratio within thumbnail box
                     float aspect = (entry->height > 0)
-                        ? (float)entry->width / (float)entry->height
-                        : 1.f;
+                                       ? (float)entry->width / (float)entry->height
+                                       : 1.f;
 
                     float dispW = thumbF;
                     float dispH = thumbF;
-                    if (aspect > 1.f) dispH = thumbF / aspect;
-                    else              dispW = thumbF * aspect;
 
-                    // Center within cell
+                    if (aspect > 1.f)
+                        dispH = thumbF / aspect;
+                    else
+                        dispW = thumbF * aspect;
+
                     float padX = (thumbF - dispW) * 0.5f;
                     float padY = (thumbF - dispH) * 0.5f;
-                    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + padX);
-                    ImGui::SetCursorPosY(ImGui::GetCursorPosY() + padY);
 
-                    ImGui::Image(imTex, ImVec2(dispW, dispH));
+                    ImVec2 cursor = ImGui::GetCursorScreenPos();
+
+                    // Reserve exact thumbnail space
+                    ImGui::InvisibleButton("thumb", ImVec2(thumbF, thumbF));
+
+                    // Draw centered texture manually
+                    ImGui::GetWindowDrawList()->AddImage(
+                        (ImTextureID)(intptr_t)tex,
+                        ImVec2(cursor.x + padX, cursor.y + padY),
+                        ImVec2(cursor.x + padX + dispW,
+                               cursor.y + padY + dispH));
                 }
                 else
                 {
@@ -239,45 +261,57 @@ private:
             }
             else
             {
-                // Non-texture or unloaded - show type icon placeholder
                 RenderPlaceholder(thumbF, entry->type);
             }
 
-            // Click handling over the thumbnail area
+            //
+            // INTERACTION
+            //
+
             if (ImGui::IsItemClicked())
             {
                 m_Selected = entry->path;
+
                 if (ImGui::IsMouseDoubleClicked(0) && m_OnSelect)
                     m_OnSelect(entry->path, entry->type);
             }
 
-            // Tooltip
             if (ImGui::IsItemHovered())
                 RenderTooltip(*entry);
 
-            // Context menu
             RenderContextMenu(*entry);
 
-            // Filename label below thumbnail (truncated)
-            std::string label = TruncateFilename(entry->filename,
-                                                  (int)(thumbF / 7.f));
-            float labelW = ImGui::CalcTextSize(label.c_str()).x;
-            float labelPad = std::max(0.f, (thumbF - labelW) * 0.5f);
+            //
+            // LABEL
+            //
+
+            std::string label =
+                TruncateFilename(entry->filename, (int)(thumbF / 7.f));
+
+            float labelW =
+                ImGui::CalcTextSize(label.c_str()).x;
+
+            float labelPad =
+                std::max(0.f, (thumbF - labelW) * 0.5f);
+
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + labelPad);
+
             ImGui::TextUnformatted(label.c_str());
+
+            ImGui::EndGroup();
 
             ImGui::PopID();
 
-            // Column layout
-            ++col;
-            if (col < columns)
-                ImGui::SameLine(col * cellSize);
-            else
-            {
-                col = 0;
-                ImGui::Spacing();
-            }
+            //
+            // GRID WRAPPING
+            //
+
+            ++i;
+
+            if (i % columns != 0)
+                ImGui::SameLine();
         }
+    }
 
     //  Type placeholder
     void RenderPlaceholder(float size, AssetType type)
