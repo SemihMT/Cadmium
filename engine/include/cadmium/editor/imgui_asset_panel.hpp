@@ -167,7 +167,6 @@ private:
                 if (ImGui::IsMouseDoubleClicked(0) && m_OnSelect)
                     m_OnSelect(entry->path, entry->type);
             }
-            ImGui::PopID();
 
             // Tooltip with metadata
             if (ImGui::IsItemHovered())
@@ -175,6 +174,8 @@ private:
 
             // Right-click context menu
             RenderContextMenu(*entry);
+
+            ImGui::PopID();
         }
     }
 
