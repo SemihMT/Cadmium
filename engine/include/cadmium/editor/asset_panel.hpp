@@ -215,10 +215,7 @@ private:
                     4.f);
             }
 
-            //
             // THUMBNAIL REGION
-            //
-
             ImGui::BeginGroup();
 
             if (entry->type == AssetType::Texture && entry->loaded)
@@ -264,10 +261,7 @@ private:
                 RenderPlaceholder(thumbF, entry->type);
             }
 
-            //
             // INTERACTION
-            //
-
             if (ImGui::IsItemClicked())
             {
                 m_Selected = entry->path;
@@ -281,10 +275,7 @@ private:
 
             RenderContextMenu(*entry);
 
-            //
             // LABEL
-            //
-
             std::string label =
                 TruncateFilename(entry->filename, (int)(thumbF / 7.f));
 
@@ -302,10 +293,7 @@ private:
 
             ImGui::PopID();
 
-            //
             // GRID WRAPPING
-            //
-
             ++i;
 
             if (i % columns != 0)

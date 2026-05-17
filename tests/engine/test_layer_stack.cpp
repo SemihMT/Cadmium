@@ -20,7 +20,7 @@ namespace Cadmium
     int GetWidth() const override { return 1280; }
     int GetHeight() const override { return 720; }
     void SetDefaultBackground(bool enabled) override {}
-    Scene* GetActiveScene() override {};
+    Scene* GetActiveScene() override { return nullptr; }
     void PushLayer(std::unique_ptr<Cadmium::Layer> layer) override
     {
       m_Stack.RequestPushLayer(std::move(layer));
@@ -39,20 +39,24 @@ namespace Cadmium
     }
     Cadmium::EventBus &GetEventBus() override
     {
+      return m_Bus;
     }
-    void PushScene(std::unique_ptr<Cadmium::Scene> scene) override {};
-    void PopScene() override {};
-    void ReplaceScene(std::unique_ptr<Cadmium::Scene> scene) override {};
-    TTF_Font* GetFont() override {};
-    DrawCommandQueue& GetDrawQueue() override {};
-    AssetManager& GetAssets() override {};
-    sol::state& GetLua() override {};
+    void PushScene(std::unique_ptr<Cadmium::Scene> scene) override {}
+    void PopScene() override {}
+    void ReplaceScene(std::unique_ptr<Cadmium::Scene> scene) override {}
+    TTF_Font* GetFont() override { return nullptr; }
+    DrawCommandQueue& GetDrawQueue() override { return m_DrawQueue; }
+    AssetManager& GetAssets() override { return m_Assets; }
+    InputManager& GetInput() override {};
+    Lua::SceneBindingState& GetSceneState() override {};
 
     bool quitRequested{false};
 
   private:
     Cadmium::LayerStack m_Stack;
-    // Cadmium::EventBus m_Bus;
+    Cadmium::EventBus m_Bus;
+    DrawCommandQueue m_DrawQueue;
+    AssetManager m_Assets;
   };
 
   // -----------------------------------------------------------------------

@@ -50,7 +50,10 @@ namespace Cadmium
     TTF_Font* GetFont();
     DrawCommandQueue &GetDrawQueue();
     AssetManager& GetAssets();
-    sol::state& GetLua();
+    InputManager& GetInput();
+    Lua::SceneBindingState& GetSceneState();
+
+
     template <typename T>
     void Post(const T &event)
     {

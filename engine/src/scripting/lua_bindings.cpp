@@ -11,10 +11,6 @@ namespace Cadmium::Lua
 
 void RegisterEntityTypes(sol::state& lua)
 {
-    static bool s_Registered = false;
-    if (s_Registered) return;
-    s_Registered = true;
-
     lua.new_usertype<EntityHandle>("EntityHandle", sol::no_constructor,
 
     sol::meta_function::index,
@@ -68,10 +64,6 @@ void RegisterEntityTypes(sol::state& lua)
 
 void RegisterComponentTypes(sol::state& lua)
 {
-    static bool s_Registered = false;
-    if (s_Registered) return;
-    s_Registered = true;
-
     lua.new_usertype<LuaComponentProxy>("LuaComponentProxy", sol::no_constructor,
 
     sol::meta_function::index,

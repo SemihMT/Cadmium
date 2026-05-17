@@ -2,20 +2,18 @@
 #define CADMIUM_EDITOR_OVERLAY_LAYER_HPP
 
 #include <cadmium/core/layer.hpp>
-#include <cadmium/editor/editor_state.hpp>
-#include <cadmium/editor/toolbar_panel.hpp>
-#include <cadmium/editor/console_panel.hpp>
-#include <cadmium/editor/script_editor_panel.hpp>
 #include <cadmium/assets/asset_manager.hpp>
+#include <cadmium/assets/asset_types.hpp>
+#include <cadmium/scripting/script_controller.hpp>
+#include <cadmium/editor/script_editor_panel.hpp>
+#include <cadmium/editor/asset_panel.hpp>
+#include <cadmium/editor/console_panel.hpp>
+#include <cadmium/editor/toolbar_panel.hpp>
 
 #ifdef CADMIUM_IMGUI
 #include <imgui.h>
+#include <imgui_internal.h>
 #endif
-
-namespace Cadmium
-{
-    class ScriptedScene;
-}
 
 namespace Cadmium::Editor
 {
@@ -23,131 +21,125 @@ namespace Cadmium::Editor
 class EditorOverlayLayer : public Layer
 {
 public:
-    EditorOverlayLayer(AssetManager& assets, ScriptedScene& scene)
+    EditorOverlayLayer(AssetManager& assets, IScriptController& controller)
         : Layer("EditorOverlayLayer")
+        , m_Assets(assets)
+        , m_Controller(controller)
         , m_ScriptPanel(assets)
-        , m_Scene(scene)
-    {}
-
-    //  Layer callbacks
-
-    void OnAttach() override
+        , m_AssetPanel(assets)
     {
-        m_Console.Attach();
-
-        // Start in Edit mode - script is paused until user hits Play
-        m_Scene.SetScriptPaused(true);
+        m_AssetPanel.SetOnSelect(
+            [this](const std::string& relativePath, AssetType type)
+            {
+                if (type != AssetType::Script) return;
+                m_ScriptPanel.OpenScript(m_Assets.ResolvePath(relativePath));
+            });
     }
 
-    void OnDetach() override
-    {
-        m_Console.Detach();
-    }
-
-    void OnUpdate(float) override
-    {
-        // Only poll run request in Edit mode
-        if (m_State != EditorState::Edit) return;
-
-        std::string source;
-        if (m_ScriptPanel.ConsumeRunRequest(source))
-            TransitionToPlay(source);
-    }
+    void OnAttach() override { m_Console.Attach(); }
+    void OnDetach() override { m_Console.Detach(); }
 
     void OnImGuiRender() override
     {
 #ifdef CADMIUM_IMGUI
-        bool stateChanged = m_Toolbar.Render(m_State);
+        EditorState stateBefore = m_State;
+        m_Toolbar.Render(m_State);
+        if (m_State != stateBefore)
+            m_Controller.Pause(m_State == EditorState::Edit);
 
-        if (stateChanged)
-            OnStateChanged();
+        std::string source;
+        if (m_ScriptPanel.ConsumeRunRequest(source))
+        {
+            bool ok = m_Controller.Reload(source);
+            if (!ok)
+                m_ScriptPanel.SetError("Script error — check console");
+            else
+                m_ScriptPanel.ClearError();
+        }
 
-        if (m_State == EditorState::Edit)
-            RenderEditPanels();
+        SetupDockspace();
+
+        m_AssetPanel.Render("Assets");
+        m_ScriptPanel.Render("Script Editor");
+        m_Console.Render("Console");
 #endif
     }
 
-    //  State access
-
-    EditorState        GetState() const  { return m_State;       }
-    ScriptEditorPanel& GetScriptPanel()  { return m_ScriptPanel; }
+    ScriptEditorPanel& GetScriptPanel() { return m_ScriptPanel; }
 
 private:
-
-    void OnStateChanged()
-    {
-        switch (m_State)
-        {
-            case EditorState::Edit:
-                // Stop pressed - pause script, keep last frame visible
-                m_Scene.SetScriptPaused(true);
-                break;
-
-            case EditorState::Play:
-                // Play pressed directly from toolbar (no source change)
-                // Just unpause - script state is whatever it was
-                m_Scene.SetScriptPaused(false);
-                break;
-        }
-    }
-
-    void TransitionToPlay(const std::string& source)
-    {
-        bool ok = m_Scene.Reload(source);
-
-        if (!ok)
-        {
-            m_ScriptPanel.SetError("Script failed to execute. Check console.");
-            // Stay in Edit mode on failure
-            m_State = EditorState::Edit;
-            return;
-        }
-
-        m_ScriptPanel.ClearError();
-        m_State = EditorState::Play;
-        m_Scene.SetScriptPaused(false);
-    }
-
 #ifdef CADMIUM_IMGUI
-
-    void RenderEditPanels()
+    void SetupDockspace()
     {
         ImGuiIO& io = ImGui::GetIO();
 
         float toolbarH = ToolbarPanel::k_ToolbarHeight;
+        ImGui::SetNextWindowPos({ 0.f, toolbarH });
+        ImGui::SetNextWindowSize({ io.DisplaySize.x,
+                                   io.DisplaySize.y - toolbarH });
+        ImGui::SetNextWindowBgAlpha(0.f);
 
-        // Script editor - right side, full height below toolbar
-        ImGui::SetNextWindowPos(
-            ImVec2(io.DisplaySize.x * 0.55f, toolbarH),
-            ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(
-            ImVec2(io.DisplaySize.x * 0.45f,
-                   io.DisplaySize.y - toolbarH),
-            ImGuiCond_FirstUseEver);
+        ImGuiWindowFlags hostFlags =
+            ImGuiWindowFlags_NoTitleBar          |
+            ImGuiWindowFlags_NoCollapse          |
+            ImGuiWindowFlags_NoResize            |
+            ImGuiWindowFlags_NoMove              |
+            ImGuiWindowFlags_NoBringToFrontOnFocus |
+            ImGuiWindowFlags_NoNavFocus          |
+            ImGuiWindowFlags_NoDocking           |
+            ImGuiWindowFlags_NoBackground;
 
-        m_ScriptPanel.Render("Script Editor");
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0.f, 0.f });
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.f);
+        ImGui::Begin("##DockspaceHost", nullptr, hostFlags);
+        ImGui::PopStyleVar(3);
 
-        // Console - bottom left, below game view
-        ImGui::SetNextWindowPos(
-            ImVec2(0.f, io.DisplaySize.y * 0.65f),
-            ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSize(
-            ImVec2(io.DisplaySize.x * 0.55f,
-                   io.DisplaySize.y * 0.35f),
-            ImGuiCond_FirstUseEver);
+        ImGuiID dockId = ImGui::GetID("##MainDockspace");
+        ImGui::DockSpace(dockId, { 0.f, 0.f }, ImGuiDockNodeFlags_PassthruCentralNode);
 
-        m_Console.Render("Console");
+        if (!m_DockLayoutBuilt)
+        {
+            BuildDefaultLayout(dockId);
+            m_DockLayoutBuilt = true;
+        }
+
+        ImGui::End();
     }
 
+    void BuildDefaultLayout(ImGuiID dockId)
+    {
+        ImGui::DockBuilderRemoveNode(dockId);
+        ImGui::DockBuilderAddNode(dockId, ImGuiDockNodeFlags_None);
+        ImGui::DockBuilderSetNodeSize(dockId, ImGui::GetMainViewport()->Size);
+
+        //  Split: left sidebar | remainder
+        ImGuiID leftId, centerId;
+        ImGui::DockBuilderSplitNode(dockId, ImGuiDir_Left, 0.22f,
+                                    &leftId, &centerId);
+
+        //  Split remainder: editor (top) | console (bottom)
+        ImGuiID editorId, consoleId;
+        ImGui::DockBuilderSplitNode(centerId, ImGuiDir_Down, 0.30f,
+                                    &consoleId, &editorId);
+
+        ImGui::DockBuilderDockWindow("Assets",        leftId);
+        ImGui::DockBuilderDockWindow("Script Editor", editorId);
+        ImGui::DockBuilderDockWindow("Console",       consoleId);
+
+        ImGui::DockBuilderFinish(dockId);
+    }
 #endif
 
-    //  Data
+    AssetManager&      m_Assets;
+    IScriptController& m_Controller;
+    EditorState        m_State{EditorState::Edit};
+    bool               m_DockLayoutBuilt{false};
 
-    EditorState       m_State{EditorState::Edit};
-    ToolbarPanel      m_Toolbar;
-    ConsolePanel      m_Console;
-    ScriptEditorPanel m_ScriptPanel;
-    ScriptedScene&    m_Scene;
+    ScriptEditorPanel  m_ScriptPanel;
+    AssetPanel         m_AssetPanel;
+    ConsolePanel       m_Console;
+    ToolbarPanel       m_Toolbar;
 };
 
 } // namespace Cadmium::Editor

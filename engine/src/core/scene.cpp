@@ -75,9 +75,14 @@ namespace Cadmium
   {
     return m_Context->GetAssets();
   }
-  sol::state &Scene::GetLua()
+
+  InputManager &Scene::GetInput()
   {
-    return m_Context->GetLua();
+    return m_Context->GetInput();
+  }
+  Lua::SceneBindingState &Scene::GetSceneState()
+  {
+    return m_Context->GetSceneState();
   }
 }
 // namespace Cadmium

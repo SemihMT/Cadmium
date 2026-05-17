@@ -24,7 +24,6 @@ public:
     explicit AssetManager() = default;
     ~AssetManager();
 
-    // Not copyable - owns SDL resources
     AssetManager(const AssetManager&)            = delete;
     AssetManager& operator=(const AssetManager&) = delete;
 
@@ -33,7 +32,7 @@ public:
     // Project root:
     // Set by the engine when a project is opened.
     // All relative paths are resolved against this.
-    void        SetProjectRoot(const std::string& root);
+    void SetProjectRoot(const std::string& root);
     const std::string& GetProjectRoot() const { return m_ProjectRoot; }
 
     // Resolve a relative path to an absolute path using the project root.
@@ -42,16 +41,15 @@ public:
     // Loading:
     // All paths are relative to the project root.
     // Returns k_InvalidHandle on failure - never throws.
-
     TextureHandle LoadTexture(const std::string& path);
     FontHandle    LoadFont(const std::string& path, int size);
     ScriptHandle  LoadScript(const std::string& path);
     // SoundHandle LoadSound(const std::string& path); // phase 4
 
+
     // Retrieval:
     // Used internally by ScriptRenderLayer and other engine systems.
     // Returns nullptr for invalid handles.
-
     SDL_Texture* GetTexture(TextureHandle handle) const;
     TTF_Font*    GetFont(FontHandle handle) const;
     const std::string* GetScriptSource(ScriptHandle handle) const;

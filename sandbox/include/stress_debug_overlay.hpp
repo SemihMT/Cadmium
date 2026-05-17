@@ -5,7 +5,7 @@
 #include <SDL3/SDL.h>
 #ifdef CADMIUM_IMGUI
 #include <imgui.h>
-#include <cadmium/editor/imgui_asset_panel.hpp>
+#include <cadmium/editor/asset_panel.hpp>
 #endif
 
 namespace Sandbox

@@ -1,7 +1,7 @@
 #include "stress_debug_overlay.hpp"
 #include "components.hpp"
 #include <cadmium/ecs/world.hpp>
-#include <cadmium/editor/imgui_asset_panel.hpp>
+#include <cadmium/editor/asset_panel.hpp>
 #include <cmath>
 #include <random>
 #include <cadmium/core/assets.hpp>

@@ -1,220 +1,202 @@
+// engine/include/cadmium/scripting/script_update_layer.hpp
 #ifndef CADMIUM_SCRIPT_UPDATE_LAYER_HPP
 #define CADMIUM_SCRIPT_UPDATE_LAYER_HPP
+
 #include <cadmium/core/layer.hpp>
-#include <cadmium/scripting/entity_registry.hpp>
-#include <sol/sol.hpp>
+#include <cadmium/scripting/script_host.hpp>
 #include <SDL3/SDL.h>
 
 namespace Cadmium
 {
-  // Drives the Lua script lifecycle each frame.
-  // Calls scene-level hooks (OnUpdate, OnRender, OnFixedUpdate) from the
-  // scene environment, and per-entity hooks on all registered entities.
-  class ScriptUpdateLayer : public Layer
-  {
-  public:
-    ScriptUpdateLayer(sol::environment &env, EntityRegistry &registry)
-        : Layer("ScriptUpdateLayer"), m_Env(env), m_Registry(registry)
-    {
-    }
 
-    //  OnUpdate
+class ScriptUpdateLayer : public Layer
+{
+public:
+    explicit ScriptUpdateLayer(ScriptHost& host)
+        : Layer("ScriptUpdateLayer"), m_Host(host)
+    {}
+
     void OnUpdate(float dt) override
     {
-      if (m_Paused) return;
-      CallEnvHook("OnUpdate", dt);
+        if (m_Host.IsPaused()) return;
+        CallEnvHook("OnUpdate", dt);
 
-      for (const auto &entry : m_Registry.All())
-      {
-        sol::object active = entry.table["active"];
-        if (active.is<bool>() && !active.as<bool>())
-          continue;
-
-        sol::object hookObj = entry.table["OnUpdate"];
-        if (!hookObj.is<sol::protected_function>())
-          continue;
-
-        sol::protected_function hook = hookObj;
-        auto r = hook(entry.handle, dt);
-        if (!r.valid())
+        for (const auto& entry : m_Host.GetRegistry().All())
         {
-          sol::error err = r;
-          SDL_Log("[Entity:OnUpdate] error: %s", err.what());
+            sol::object active = entry.table["active"];
+            if (active.is<bool>() && !active.as<bool>())
+                continue;
+
+            sol::object hookObj = entry.table["OnUpdate"];
+            if (!hookObj.is<sol::protected_function>())
+                continue;
+
+            sol::protected_function hook = hookObj;
+            auto r = hook(entry.handle, dt);
+            if (!r.valid())
+            {
+                sol::error err = r;
+                SDL_Log("[Entity:OnUpdate] error: %s", err.what());
+            }
         }
-      }
     }
 
-    //  OnFixedUpdate
     void OnFixedUpdate(float dt) override
     {
-      if (m_Paused) return;
-      CallEnvHook("OnFixedUpdate", dt);
+        if (m_Host.IsPaused()) return;
+        CallEnvHook("OnFixedUpdate", dt);
 
-      for (const auto &entry : m_Registry.All())
-      {
-        sol::object active = entry.table["active"];
-        if (active.is<bool>() && !active.as<bool>())
-          continue;
+        for (const auto& entry : m_Host.GetRegistry().All())
+        {
+            sol::object active = entry.table["active"];
+            if (active.is<bool>() && !active.as<bool>())
+                continue;
 
-        sol::object hookObj = entry.table["OnFixedUpdate"];
-        if (!hookObj.is<sol::protected_function>())
-          continue;
+            sol::object hookObj = entry.table["OnFixedUpdate"];
+            if (!hookObj.is<sol::protected_function>())
+                continue;
 
-        sol::protected_function hook = hookObj;
-        auto r = hook(entry.handle, dt);
+            sol::protected_function hook = hookObj;
+            auto r = hook(entry.handle, dt);
+            if (!r.valid())
+            {
+                sol::error err = r;
+                SDL_Log("[Entity:OnFixedUpdate] error: %s", err.what());
+            }
+        }
+    }
+
+    void OnRender(SDL_Renderer*) override
+    {
+        if (m_Host.IsPaused()) return;
+        CallEnvHook("OnRender");
+
+        for (const auto& entry : m_Host.GetRegistry().All())
+        {
+            sol::object visible = entry.table["visible"];
+            if (visible.is<bool>() && !visible.as<bool>())
+                continue;
+
+            sol::object active = entry.table["active"];
+            if (active.is<bool>() && !active.as<bool>())
+                continue;
+
+            sol::object hookObj = entry.table["OnRender"];
+            if (!hookObj.is<sol::protected_function>())
+                continue;
+
+            sol::protected_function hook = hookObj;
+            auto r = hook(entry.handle);
+            if (!r.valid())
+            {
+                sol::error err = r;
+                SDL_Log("[Entity:OnRender] error: %s", err.what());
+            }
+        }
+
+        m_Host.GetRegistry().FlushDestroyed(GetWorld());
+    }
+
+    void OnEvent(SDL_Event& event) override
+    {
+        if (m_Host.IsPaused()) return;
+
+        sol::table evtTable = BuildEventTable(event);
+        if (!evtTable.valid())
+            return;
+
+        CallEnvHook("OnEvent");
+
+        for (const auto& entry : m_Host.GetRegistry().All())
+        {
+            sol::object active = entry.table["active"];
+            if (active.is<bool>() && !active.as<bool>())
+                continue;
+
+            sol::object hookObj = entry.table["OnEvent"];
+            if (!hookObj.is<sol::protected_function>())
+                continue;
+
+            sol::protected_function hook = hookObj;
+            hook(entry.handle, evtTable);
+        }
+    }
+
+private:
+    ScriptHost& m_Host;
+
+    void CallEnvHook(const std::string& name)
+    {
+        sol::protected_function f = m_Host.GetEnv()[name];
+        if (!f.valid()) return;
+        auto r = f();
         if (!r.valid())
         {
-          sol::error err = r;
-          SDL_Log("[Entity:OnFixedUpdate] error: %s", err.what());
+            sol::error err = r;
+            SDL_Log("[Scene:%s] error: %s", name.c_str(), err.what());
         }
-      }
     }
 
-    //  OnRender
-    // Note: OnRender on entities only pushes to DrawCommandQueue.
-    // ScriptRenderLayer drains it. Ordering is guaranteed by layer stack.
-    void OnRender(SDL_Renderer *) override
+    void CallEnvHook(const std::string& name, float dt)
     {
-      if (m_Paused) return; // maybe not necessary?
-      CallEnvHook("OnRender");
-
-      for (const auto &entry : m_Registry.All())
-      {
-        sol::object visible = entry.table["visible"];
-        if (visible.is<bool>() && !visible.as<bool>())
-          continue;
-
-        sol::object active = entry.table["active"];
-        if (active.is<bool>() && !active.as<bool>())
-          continue;
-
-        sol::object hookObj = entry.table["OnRender"];
-        if (!hookObj.is<sol::protected_function>())
-          continue;
-
-        sol::protected_function hook = hookObj;
-        auto r = hook(entry.handle); // handle as self
+        sol::protected_function f = m_Host.GetEnv()[name];
+        if (!f.valid()) return;
+        auto r = f(dt);
         if (!r.valid())
         {
-          sol::error err = r;
-          SDL_Log("[Entity:OnRender] error: %s", err.what());
+            sol::error err = r;
+            SDL_Log("[Scene:%s] error: %s", name.c_str(), err.what());
         }
-      }
-
-      m_Registry.FlushDestroyed(GetWorld());
     }
 
-    void OnEvent(SDL_Event &event) override
+    sol::table BuildEventTable(SDL_Event& event)
     {
-      if (m_Paused) return;
-      sol::table evtTable = BuildEventTable(event);
-      if (!evtTable.valid())
-        return;
+        sol::state_view lua(m_Host.GetEnv().lua_state());
 
-      CallEnvHook("OnEvent");
-
-      for (const auto &entry : m_Registry.All())
-      {
-        sol::object active = entry.table["active"];
-        if (active.is<bool>() && !active.as<bool>())
-          continue;
-
-        sol::object hookObj = entry.table["OnEvent"];
-        if (!hookObj.is<sol::protected_function>())
-          continue;
-
-        sol::protected_function hook = hookObj;
-        hook(entry.handle, evtTable); // handle as self
-      }
+        switch (event.type)
+        {
+        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_UP:
+        {
+            sol::table t = lua.create_table();
+            t["type"]   = (event.type == SDL_EVENT_KEY_DOWN) ? "keydown" : "keyup";
+            t["key"]    = std::string(SDL_GetScancodeName(event.key.scancode));
+            t["repeat"] = event.key.repeat;
+            return t;
+        }
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+        {
+            sol::table t = lua.create_table();
+            t["type"]   = (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) ? "mousedown" : "mouseup";
+            t["button"] = (int)event.button.button;
+            t["x"]      = event.button.x;
+            t["y"]      = event.button.y;
+            return t;
+        }
+        case SDL_EVENT_MOUSE_MOTION:
+        {
+            sol::table t = lua.create_table();
+            t["type"] = "mousemove";
+            t["x"]    = event.motion.x;
+            t["y"]    = event.motion.y;
+            t["dx"]   = event.motion.xrel;
+            t["dy"]   = event.motion.yrel;
+            return t;
+        }
+        case SDL_EVENT_MOUSE_WHEEL:
+        {
+            sol::table t = lua.create_table();
+            t["type"] = "mousewheel";
+            t["x"]    = event.wheel.x;
+            t["y"]    = event.wheel.y;
+            return t;
+        }
+        default:
+            return sol::table{};
+        }
     }
-
-    void SetPaused(bool paused) { m_Paused = paused; }
-
-  private:
-    sol::environment &m_Env;
-    EntityRegistry &m_Registry;
-    bool m_Paused{false};
-    //  Scene-level hook helpers
-
-    void CallEnvHook(const std::string &name)
-    {
-      sol::protected_function f = m_Env[name];
-      if (!f.valid())
-        return;
-      auto r = f();
-      if (!r.valid())
-      {
-        sol::error err = r;
-        SDL_Log("[Scene:%s] error: %s", name.c_str(), err.what());
-      }
-    }
-
-    void CallEnvHook(const std::string &name, float dt)
-    {
-      sol::protected_function f = m_Env[name];
-      if (!f.valid())
-        return;
-      auto r = f(dt);
-      if (!r.valid())
-      {
-        sol::error err = r;
-        SDL_Log("[Scene:%s] error: %s", name.c_str(), err.what());
-      }
-    }
-
-    //  Event table builder
-    // Converts SDL_Event to a plain Lua table.
-    // Returns an invalid table if the event type is not exposed to scripts.
-    sol::table BuildEventTable(SDL_Event &event)
-    {
-      sol::state_view lua(m_Env.lua_state());
-
-      switch (event.type)
-      {
-      case SDL_EVENT_KEY_DOWN:
-      case SDL_EVENT_KEY_UP:
-      {
-        sol::table t = lua.create_table();
-        t["type"] = (event.type == SDL_EVENT_KEY_DOWN) ? "keydown" : "keyup";
-        t["key"] = std::string(SDL_GetScancodeName(event.key.scancode));
-        t["repeat"] = event.key.repeat;
-        return t;
-      }
-      case SDL_EVENT_MOUSE_BUTTON_DOWN:
-      case SDL_EVENT_MOUSE_BUTTON_UP:
-      {
-        sol::table t = lua.create_table();
-        t["type"] = (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
-                        ? "mousedown"
-                        : "mouseup";
-        t["button"] = (int)event.button.button;
-        t["x"] = event.button.x;
-        t["y"] = event.button.y;
-        return t;
-      }
-      case SDL_EVENT_MOUSE_MOTION:
-      {
-        sol::table t = lua.create_table();
-        t["type"] = "mousemove";
-        t["x"] = event.motion.x;
-        t["y"] = event.motion.y;
-        t["dx"] = event.motion.xrel;
-        t["dy"] = event.motion.yrel;
-        return t;
-      }
-      case SDL_EVENT_MOUSE_WHEEL:
-      {
-        sol::table t = lua.create_table();
-        t["type"] = "mousewheel";
-        t["x"] = event.wheel.x;
-        t["y"] = event.wheel.y;
-        return t;
-      }
-      default:
-        return sol::table{}; // not exposed
-      }
-    }
-  };
+};
 
 } // namespace Cadmium
 

@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <SDL3/SDL.h>
 #include <cadmium/ecs/components.hpp>
+#include <cadmium/ecs/registry.hpp>
+#include <cadmium/ecs/world.hpp>
 
 namespace Cadmium
 {
@@ -15,8 +17,8 @@ namespace Cadmium
   public:
     struct Entry
     {
-      sol::table table;   // for field lookups, identity comparison, Find/FindAll
-      sol::object handle; // EntityHandle userdata - passed as self to hooks
+      sol::table table;
+      sol::object handle;
       Entity      cppEntity;
       Registry*   registry;
     };

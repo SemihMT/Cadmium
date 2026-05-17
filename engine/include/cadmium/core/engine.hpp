@@ -11,14 +11,13 @@
 #include <cadmium/core/event_bus.hpp>
 
 #include <SDL3/SDL.h>
-#include <sol/sol.hpp>
+#include <SDL3_ttf/SDL_ttf.h>
 
 #include <memory>
 
 #ifdef CADMIUM_PLATFORM_WEB
 #include <emscripten.h>
 #endif
-#include <SDL3_ttf/SDL_ttf.h>
 
 
 namespace Cadmium
@@ -61,8 +60,8 @@ namespace Cadmium
     TTF_Font* GetFont() override;
     DrawCommandQueue& GetDrawQueue() override;
     AssetManager& GetAssets() override;
-    sol::state& GetLua() override;
-
+    InputManager& GetInput() override;
+    Lua::SceneBindingState& GetSceneState() override;
   private:
     void Iterate();
     void TrySetDefaultBackground();

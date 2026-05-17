@@ -35,7 +35,10 @@
       "inherits": "base",
       "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
       "cacheVariables": {
-        "CMAKE_EXECUTABLE_SUFFIX": ".html"
+        "CMAKE_EXECUTABLE_SUFFIX": ".html",
+        "CMAKE_CXX_FLAGS": "",
+        "CMAKE_C_FLAGS": "",
+        "CMAKE_EXE_LINKER_FLAGS": ""
       }
     },
     {
@@ -59,7 +62,10 @@
       "displayName": "Emscripten Debug",
       "inherits": "emscripten-base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_FLAGS": "-g",
+        "CMAKE_C_FLAGS": "-g",
+        "CMAKE_EXE_LINKER_FLAGS": "-g -s ASSERTIONS=1 -s SAFE_HEAP=1 -s STACK_OVERFLOW_CHECK=1 -s NO_DISABLE_EXCEPTION_CATCHING=1"
       }
     },
     {
@@ -67,7 +73,9 @@
       "displayName": "Emscripten Release",
       "inherits": "emscripten-base",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_FLAGS": "",
+        "CMAKE_EXE_LINKER_FLAGS": ""
       }
     }
   ],

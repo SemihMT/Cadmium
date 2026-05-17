@@ -219,11 +219,7 @@ namespace Cadmium
   }
   void Engine::TrySetDefaultBackground()
   {
-    std::string bgPath = AssetPath("assets/Cadmium-bg.bmp");
-    m_DefaultBackgroundHandle = m_AssetManager.LoadTexture(bgPath);
-
-    if (m_DefaultBackgroundHandle == k_InvalidHandle)
-      SDL_Log("Cadmium: default background not found at '%s'", bgPath.c_str());
+    m_DefaultBackgroundHandle = m_AssetManager.LoadTexture("Cadmium-bg.bmp");
   }
 
   void Engine::SetClearColor(float r, float g, float b, float a)
@@ -349,8 +345,14 @@ namespace Cadmium
   {
     return m_AssetManager;
   }
-  sol::state &Engine::GetLua()
+  InputManager &Engine::GetInput()
   {
-    return m_Lua;
+    return m_Input;
   }
-} // namespace Cadmium
+
+  Lua::SceneBindingState &Engine::GetSceneState()
+  {
+    return m_SceneState;
+  }
+}
+ // namespace Cadmium
