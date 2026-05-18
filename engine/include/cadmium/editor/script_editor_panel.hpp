@@ -73,6 +73,7 @@ public:
         m_RunRequested = false;
         if (!HasActiveBuffer()) return false;
         outSource = ActiveBuffer().GetText();
+        SDL_Log("ConsumeRunRequest: source length = %zu", outSource.size());
         return true;
     }
 

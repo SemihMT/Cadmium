@@ -33,7 +33,7 @@ void ScriptedScene::OnEnter()
 
     if (m_EditorAssets) {
         auto overlay = std::make_unique<Editor::EditorOverlayLayer>(
-            *m_EditorAssets, GetController());
+            *m_EditorAssets, GetController(), GetContext());
         PushOverlay(std::move(overlay));
     }
 

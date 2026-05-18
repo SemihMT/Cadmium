@@ -19,6 +19,7 @@ public:
     void OnUpdate(float dt) override
     {
         if (m_Host.IsPaused()) return;
+        m_Host.UpdateSceneState();
         CallEnvHook("OnUpdate", dt);
 
         for (const auto& entry : m_Host.GetRegistry().All())

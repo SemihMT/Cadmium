@@ -28,6 +28,7 @@ namespace Cadmium
 
   public: // Engine-facing interface
     void SetContext(IEngineContext *context);
+    IEngineContext *GetContext() const;
     LayerStack &GetLayerStack();
     EventBus &GetEventBus();
 

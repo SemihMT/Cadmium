@@ -7,6 +7,8 @@
 #include <cadmium/scripting/script_controller.hpp>
 #include <cadmium/editor/script_editor_panel.hpp>
 #include <cadmium/editor/asset_panel.hpp>
+#include <cadmium/editor/viewport_panel.hpp>
+#include <cadmium/editor/render_viewport.hpp>
 #include <cadmium/editor/console_panel.hpp>
 #include <cadmium/editor/toolbar_panel.hpp>
 
@@ -21,12 +23,17 @@ namespace Cadmium::Editor
 class EditorOverlayLayer : public Layer
 {
 public:
-    EditorOverlayLayer(AssetManager& assets, IScriptController& controller)
+    EditorOverlayLayer(AssetManager& assets, IScriptController& controller, IEngineContext* context)
         : Layer("EditorOverlayLayer")
         , m_Assets(assets)
         , m_Controller(controller)
         , m_ScriptPanel(assets)
         , m_AssetPanel(assets)
+        , m_Context(context)
+        , m_ViewportPanel([this](int w, int h)
+            {
+               m_Context->ResizeViewport(w,h);
+            })
     {
         m_AssetPanel.SetOnSelect(
             [this](const std::string& relativePath, AssetType type)
@@ -36,8 +43,16 @@ public:
             });
     }
 
-    void OnAttach() override { m_Console.Attach(); }
-    void OnDetach() override { m_Console.Detach(); }
+    void OnAttach() override
+    {
+        m_Console.Attach();
+        m_Context->EnableViewport(1280, 720);
+    }
+    void OnDetach() override
+    {
+        m_Console.Detach();
+        m_Context->DisableViewport();
+    }
 
     void OnImGuiRender() override
     {
@@ -62,6 +77,7 @@ public:
         m_AssetPanel.Render("Assets");
         m_ScriptPanel.Render("Script Editor");
         m_Console.Render("Console");
+        m_ViewportPanel.Render(m_Context->GetViewport(), "Viewport");
 #endif
     }
 
@@ -113,19 +129,22 @@ private:
         ImGui::DockBuilderAddNode(dockId, ImGuiDockNodeFlags_None);
         ImGui::DockBuilderSetNodeSize(dockId, ImGui::GetMainViewport()->Size);
 
-        //  Split: left sidebar | remainder
-        ImGuiID leftId, centerId;
-        ImGui::DockBuilderSplitNode(dockId, ImGuiDir_Left, 0.22f,
-                                    &leftId, &centerId);
+        // Split: left | center
+        ImGuiID leftId, rightId;
+        ImGui::DockBuilderSplitNode(dockId, ImGuiDir_Left, 0.20f, &leftId, &rightId);
 
-        //  Split remainder: editor (top) | console (bottom)
-        ImGuiID editorId, consoleId;
-        ImGui::DockBuilderSplitNode(centerId, ImGuiDir_Down, 0.30f,
-                                    &consoleId, &editorId);
+        // Split center: viewport (top) | console (bottom)
+        ImGuiID viewportId, bottomId;
+        ImGui::DockBuilderSplitNode(rightId, ImGuiDir_Down, 0.25f, &bottomId, &viewportId);
 
-        ImGui::DockBuilderDockWindow("Assets",        leftId);
+        // Split viewport area: game view (left) | script editor (right)
+        ImGuiID gameId, editorId;
+        ImGui::DockBuilderSplitNode(viewportId, ImGuiDir_Right, 0.45f, &editorId, &gameId);
+
+        ImGui::DockBuilderDockWindow("Assets", leftId);
+        ImGui::DockBuilderDockWindow("Viewport", gameId);
         ImGui::DockBuilderDockWindow("Script Editor", editorId);
-        ImGui::DockBuilderDockWindow("Console",       consoleId);
+        ImGui::DockBuilderDockWindow("Console", bottomId);
 
         ImGui::DockBuilderFinish(dockId);
     }
@@ -133,6 +152,7 @@ private:
 
     AssetManager&      m_Assets;
     IScriptController& m_Controller;
+    IEngineContext*    m_Context {nullptr};
     EditorState        m_State{EditorState::Edit};
     bool               m_DockLayoutBuilt{false};
 
@@ -140,6 +160,7 @@ private:
     AssetPanel         m_AssetPanel;
     ConsolePanel       m_Console;
     ToolbarPanel       m_Toolbar;
+    ViewportPanel      m_ViewportPanel;
 };
 
 } // namespace Cadmium::Editor

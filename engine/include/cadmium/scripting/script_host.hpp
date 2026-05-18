@@ -25,6 +25,7 @@ public:
                   DrawCommandQueue&  queue,
                   InputManager&      input,
                   Lua::SceneBindingState& sceneState);
+    void UpdateSceneState();
 
     // IScriptController
     bool Reload(const std::string& source) override;

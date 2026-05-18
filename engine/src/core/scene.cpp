@@ -8,10 +8,8 @@ namespace Cadmium
   {
     m_Context = context;
   }
-  LayerStack &Scene::GetLayerStack()
-  {
-    return m_LayerStack;
-  }
+  IEngineContext *Scene::GetContext() const { return m_Context; }
+  LayerStack &Scene::GetLayerStack() { return m_LayerStack; }
   EventBus &Scene::GetEventBus()
   {
     return m_EventBus;

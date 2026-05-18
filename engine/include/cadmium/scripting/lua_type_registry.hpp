@@ -16,11 +16,9 @@ namespace Cadmium
     // ID must already be assigned on the schema before calling this.
     void Register(LuaComponentSchema schema)
     {
-      const std::string &name = schema.typeName;
-      if (m_ByName.contains(name))
-        throw std::runtime_error("Lua component type already registered: " + name);
-
-      m_ByName[name] = std::move(schema);
+      assert(!m_ByName.contains(schema.typeName) &&
+             "Lua component type already registered! Call site should check first");
+      m_ByName[schema.typeName] = std::move(schema);
     }
 
     const LuaComponentSchema *Find(const std::string &name) const

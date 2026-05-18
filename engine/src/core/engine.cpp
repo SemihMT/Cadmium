@@ -51,20 +51,6 @@ namespace Cadmium
     TrySetDefaultBackground();
 
     m_ImGuiLayer.Init(m_Window, m_Renderer);
-
-    m_Lua.open_libraries(
-        sol::lib::base,
-        sol::lib::math,
-        sol::lib::table,
-        sol::lib::string,
-        sol::lib::io,     // for file loading - restrict in sandbox build
-        sol::lib::os,     // TODO: Whitelist functionality to make os library access safe
-        sol::lib::package // for require()
-    );
-    Lua::BindAll(m_Lua, m_Input, m_DrawQueue, m_SceneState);
-    Lua::RegisterEntityTypes(m_Lua);
-    Lua::BindAssets(m_Lua, m_AssetManager);
-    Lua::RegisterComponentTypes(m_Lua);
   }
 
   Engine::~Engine()
@@ -138,11 +124,9 @@ namespace Cadmium
         (*it)->OnEvent(event);
     }
     m_Input.SnapshotPost();
-    m_SceneState.Width = static_cast<float>(m_Width);
-    m_SceneState.Height = static_cast<float>(m_Height);
+
     m_SceneState.Time += dt;
     m_SceneState.DeltaTime = dt;
-    Lua::UpdateSceneBindings(m_Lua, m_SceneState);
 
     m_Accumulator += dt;
     while (m_Accumulator >= m_FixedTimestep)
@@ -167,6 +151,13 @@ namespace Cadmium
                            toUint8(m_ClearColor.g),
                            toUint8(m_ClearColor.b),
                            toUint8(m_ClearColor.a));
+
+    if (m_UseViewport && m_Viewport.IsReady())
+    {
+      if (!m_Viewport.Bind())
+        m_UseViewport = false;
+    }
+
     SDL_RenderClear(m_Renderer);
 
     if (m_UseDefaultBackground)
@@ -179,10 +170,25 @@ namespace Cadmium
     for (auto &layer : layerStack)
       layer->OnRender(m_Renderer);
 
+    if (m_UseViewport && m_Viewport.IsReady())
+      m_Viewport.Unbind();
+
     m_ImGuiLayer.Begin();
     for (auto &layer : layerStack)
       layer->OnImGuiRender();
     m_ImGuiLayer.End(m_Renderer);
+
+     if (m_UseViewport && m_Viewport.IsReady())
+    {
+      m_SceneState.Width = static_cast<float>(m_Viewport.GetWidth());
+      m_SceneState.Height = static_cast<float>(m_Viewport.GetHeight());
+    }
+    else
+    {
+      m_SceneState.Width = static_cast<float>(m_Width);
+      m_SceneState.Height = static_cast<float>(m_Height);
+    }
+
 
     SDL_RenderPresent(m_Renderer);
     eventBus.Dispatch();
@@ -240,10 +246,24 @@ namespace Cadmium
   {
     m_UseDefaultBackground = false;
   }
-  SDL_Renderer *Engine::GetRenderer() const
+  void Engine::EnableViewport(int w, int h)
   {
-    return m_Renderer;
+    m_UseViewport = m_Viewport.Init(m_Renderer, w, h);
   }
+  void Engine::ResizeViewport(int w, int h)
+  {
+    m_UseViewport = m_Viewport.Resize(w, h);
+  }
+  void Engine::DisableViewport()
+  {
+      m_UseViewport = false;
+  }
+  SDL_Texture *Engine::GetRenderTarget()
+  {
+    return m_UseViewport ? m_Viewport.GetTexture() : nullptr;
+  }
+  Editor::RenderViewport& Engine::GetViewport() { return m_Viewport; }
+  SDL_Renderer *Engine::GetRenderer() const { return m_Renderer; }
   void Engine::SetTargetFPS(int fps)
   {
     m_TargetFrameNS = (fps > 0)

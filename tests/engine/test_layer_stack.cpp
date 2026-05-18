@@ -49,7 +49,11 @@ namespace Cadmium
     AssetManager& GetAssets() override { return m_Assets; }
     InputManager& GetInput() override {};
     Lua::SceneBindingState& GetSceneState() override {};
-
+    SDL_Texture* GetRenderTarget() override { return nullptr; }
+    void EnableViewport(int w, int h) override  {}
+    void DisableViewport() override {}
+    void ResizeViewport(int w, int h)  override{}
+    Editor::RenderViewport &GetViewport() override {};
     bool quitRequested{false};
 
   private:

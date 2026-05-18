@@ -45,6 +45,11 @@ void ScriptHost::BindAPIs(World&                  world,
     Lua::BindComponents(m_Lua, world);
 }
 
+void ScriptHost::UpdateSceneState()
+{
+if (m_SceneState)
+    Lua::UpdateSceneBindings(m_Lua, *m_SceneState);
+}
 bool ScriptHost::Load(const std::string& source, const std::string& debugName)
 {
     m_LastDebugName = debugName;
@@ -102,7 +107,10 @@ bool ScriptHost::Execute(const std::string& source, const std::string& debugName
             return false;
         }
     }
+    SDL_Log("Execute complete, OnEnter valid: %d", (int)onEnter.valid());
 
+    sol::protected_function onRender = m_Env["OnRender"];
+    SDL_Log("OnRender valid after execute: %d", (int)onRender.valid());
     return true;
 }
 

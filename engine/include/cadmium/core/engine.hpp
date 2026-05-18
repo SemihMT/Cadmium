@@ -3,6 +3,7 @@
 
 #include <cadmium/core/draw_command_queue.hpp>
 #include <cadmium/scripting/lua_bindings.hpp>
+#include <cadmium/editor/render_viewport.hpp>
 #include <cadmium/assets/asset_manager.hpp>
 #include <cadmium/core/engine_context.hpp>
 #include <cadmium/core/scene_manager.hpp>
@@ -62,6 +63,13 @@ namespace Cadmium
     AssetManager& GetAssets() override;
     InputManager& GetInput() override;
     Lua::SceneBindingState& GetSceneState() override;
+    SDL_Texture* GetRenderTarget() override;
+    void EnableViewport(int w, int h) override;
+    void DisableViewport() override;
+    void ResizeViewport(int w, int h) override;
+    Editor::RenderViewport& GetViewport() override;
+
+
   private:
     void Iterate();
     void TrySetDefaultBackground();
@@ -75,17 +83,18 @@ namespace Cadmium
     SDL_Window *m_Window{nullptr};
     SDL_Renderer *m_Renderer{nullptr};
     TTF_Font *m_Font{nullptr};
-    TextureHandle m_DefaultBackgroundHandle = k_InvalidHandle;
+    TextureHandle m_DefaultBackgroundHandle{k_InvalidHandle};
     ImGuiLayer m_ImGuiLayer{};
     InputManager m_Input{};
     DrawCommandQueue m_DrawQueue{};
-    AssetManager m_AssetManager;
+    AssetManager m_AssetManager{};
     Lua::SceneBindingState m_SceneState{};
-    sol::state m_Lua{};
+    Editor::RenderViewport m_Viewport{};
 
     int m_Width{0};
     int m_Height{0};
     bool m_Running{true};
+    bool m_UseViewport{false};
     bool m_UseDefaultBackground{true};
 
     Cadmium::Color m_ClearColor{0.0f, 0.0f, 0.0f, 1.0f};

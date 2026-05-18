@@ -16,7 +16,10 @@ namespace Cadmium
   {
     class SceneBindingState;
   }
-
+  namespace Editor
+  {
+    class RenderViewport;
+  }
   class Layer;
   class Scene;
   class InputManager;
@@ -44,6 +47,11 @@ namespace Cadmium
     virtual DrawCommandQueue& GetDrawQueue() = 0;
     virtual InputManager& GetInput() = 0;
     virtual Lua::SceneBindingState& GetSceneState() = 0;
+    virtual SDL_Texture* GetRenderTarget() {return nullptr;}
+    virtual void EnableViewport(int w, int h)  {}
+    virtual void DisableViewport() {}
+    virtual void ResizeViewport(int w, int h) {}
+    virtual Editor::RenderViewport &GetViewport() =0;
   };
 } // namespace Cadmium
 

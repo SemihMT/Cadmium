@@ -72,10 +72,14 @@ namespace Cadmium
     // assigns it a ComponentID from the global counter
     ComponentID RegisterLuaComponent(LuaComponentSchema schema)
     {
-      schema.id = NextComponentID();
-      ComponentID id = schema.id;
-      m_LuaTypes.Register(std::move(schema));
-      return id;
+       const LuaComponentSchema* existing = m_LuaTypes.Find(schema.typeName);
+       if (existing)
+         return existing->id;
+
+       schema.id = NextComponentID();
+       ComponentID id = schema.id;
+       m_LuaTypes.Register(std::move(schema));
+       return id;
     }
 
     void AddLuaComponent(Entity e, const std::string &typeName,

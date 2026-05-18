@@ -40,10 +40,10 @@ namespace Cadmium::Lua
       {
         if (!k.is<std::string>())
           continue;
-        std::string fieldName = k.as<std::string>();
 
+        std::string fieldName = k.as<std::string>();
         LuaFieldDef fd;
-        // Bool before float - critical ordering
+
         if (v.is<bool>())
         {
           fd.type = LuaFieldType::Bool;
@@ -70,14 +70,7 @@ namespace Cadmium::Lua
         schema.fields[fieldName] = fd;
       }
 
-      try
-      {
-        w->RegisterLuaComponent(std::move(schema));
-      }
-      catch (const std::exception &e)
-      {
-        SDL_Log("[Component.Register] %s", e.what());
-      }
+      w->RegisterLuaComponent(std::move(schema));
     });
 
     // Component.Add(entity, "Health")
