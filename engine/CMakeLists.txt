@@ -17,7 +17,9 @@ add_library(cadmium-engine STATIC
 
 target_include_directories(cadmium-engine
     PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${emscripten_browser_clipboard_SOURCE_DIR}
 )
 
 target_link_libraries(cadmium-engine
@@ -39,9 +41,12 @@ target_compile_definitions(cadmium-engine
 
 if(EMSCRIPTEN)
     target_compile_definitions(cadmium-engine PUBLIC CADMIUM_PLATFORM_WEB)
+    target_include_directories(cadmium-engine PRIVATE
+        ${emscripten_browser_clipboard_SOURCE_DIR}
+    )
 endif()
 
 if(CADMIUM_IMGUI)
-    target_link_libraries(cadmium-engine PUBLIC imgui-lib)
+    target_link_libraries(cadmium-engine PUBLIC imgui-lib colortextedit-lib)
     target_compile_definitions(cadmium-engine PUBLIC CADMIUM_IMGUI)
 endif()

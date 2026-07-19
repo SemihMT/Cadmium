@@ -4,7 +4,7 @@
 #include <variant>
 #include <vector>
 #include <unordered_map>
-#include <cadmium/ecs/component_id.hpp>
+#include "component_id.hpp"
 
 namespace Cadmium
 {

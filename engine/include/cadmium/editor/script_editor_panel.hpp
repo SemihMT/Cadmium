@@ -1,16 +1,21 @@
 #ifndef CADMIUM_EDITOR_SCRIPT_EDITOR_PANEL_HPP
 #define CADMIUM_EDITOR_SCRIPT_EDITOR_PANEL_HPP
 
-#include <cadmium/editor/scriptbuffer.hpp>
 #include <cadmium/assets/asset_manager.hpp>
 #include <cadmium/core/logger.hpp>
+#include <algorithm>
+#include <cstdint>
+#include <deque>
 #include <filesystem>
 #include <fstream>
-#include <vector>
 #include <string>
+#include <vector>
+
+#include <TextEditor.h>
 
 #ifdef CADMIUM_IMGUI
-#include <imgui.h>
+#   include <imgui.h>
+#   include <imgui_internal.h>
 #endif
 
 namespace Cadmium::Editor
@@ -21,73 +26,93 @@ class ScriptEditorPanel
 public:
     explicit ScriptEditorPanel(AssetManager& assets)
         : m_Assets(assets)
-    {
-        m_StagingBuffer.resize(k_StagingCapacity, '\0');
-    }
+    {}
 
-    //  Tab management:
-    // Open a script by its resolved path. If already open, switches to that tab.
-    // Returns false if the file cannot be read.
+
     bool OpenScript(const std::string& fullPath)
     {
-        // Already open? Switch to it.
-        for (int i = 0; i < (int)m_Buffers.size(); ++i)
+#ifdef CADMIUM_IMGUI
+        for (int i = 0; i < TabCount(); ++i)
         {
-            if (m_Buffers[i].GetPath() == fullPath)
+            if (m_Tabs[i].path == fullPath)
             {
                 SwitchToTab(i);
                 return true;
             }
         }
 
-        std::ifstream file(fullPath);
+        std::ifstream file(fullPath, std::ios::binary);
         if (!file.is_open())
         {
             Log::Error("ScriptEditor", "Cannot open '{}'", fullPath);
             return false;
         }
 
-        std::string source(
-            (std::istreambuf_iterator<char>(file)),
-            std::istreambuf_iterator<char>());
+        std::string source((std::istreambuf_iterator<char>(file)),
+                            std::istreambuf_iterator<char>());
 
-        m_Buffers.emplace_back(fullPath, std::move(source));
-        m_FocusNewTab = true;
-        SwitchToTab((int)m_Buffers.size() - 1);
+        PushTab(std::filesystem::path(fullPath).filename().string(), fullPath, source);
         return true;
+#else
+        return false;
+#endif
     }
 
     void OpenBlank()
     {
-        m_Buffers.emplace_back("untitled.lua");
-        m_FocusNewTab = true;
-        SwitchToTab((int)m_Buffers.size() - 1);
+#ifdef CADMIUM_IMGUI
+        PushTab("untitled.lua", "", "");
+#endif
     }
 
-    //  Run polling:
-    // Call each frame. Returns true once when Run was pressed.
-    // outSource is filled with the current buffer text.
+
     bool ConsumeRunRequest(std::string& outSource)
     {
+#ifdef CADMIUM_IMGUI
         if (!m_RunRequested) return false;
         m_RunRequested = false;
-        if (!HasActiveBuffer()) return false;
-        outSource = ActiveBuffer().GetText();
-        SDL_Log("ConsumeRunRequest: source length = %zu", outSource.size());
+        if (!HasActive()) return false;
+        outSource = Active().editor.GetText();
         return true;
+#else
+        return false;
+#endif
     }
 
-    //  Error feedback
-    void SetError(const std::string& error) { m_LastError = error; }
-    void ClearError()                        { m_LastError.clear(); }
 
-    //  Render
+    void SetError(const std::string& error, int line = -1)
+    {
+#ifdef CADMIUM_IMGUI
+        m_LastError = error;
+        if (!HasActive()) return;
+        Active().editor.ClearMarkers();
+        if (line >= 0)
+        {
+            Active().editor.AddMarker(
+                line,
+                IM_COL32(220, 60,  60, 255),
+                IM_COL32(255, 80,  80,  40),
+                "Error",
+                error.c_str());
+        }
+#endif
+    }
+
+    void ClearError()
+    {
+#ifdef CADMIUM_IMGUI
+        m_LastError.clear();
+        if (HasActive())
+            Active().editor.ClearMarkers();
+#endif
+    }
+
     void Render(const char* windowName = "Script Editor")
     {
 #ifdef CADMIUM_IMGUI
         ImGui::Begin(windowName);
 
-        if (m_Buffers.empty())
+        if (m_Tabs.empty())
         {
             RenderEmptyState();
             ImGui::End();
@@ -106,134 +131,211 @@ public:
 private:
 #ifdef CADMIUM_IMGUI
 
-    void RenderEmptyState()
+
+    struct Tab
     {
-        ImVec2 avail = ImGui::GetContentRegionAvail();
-        float  textW = ImGui::CalcTextSize("No script open").x;
+        uint64_t    id   = 0;
+        std::string name;       // display name
+        std::string path;       // empty when unsaved
+        TextEditor  editor;
+        bool        dirty = false;
 
-        ImGui::SetCursorPosX((avail.x - textW) * 0.5f);
-        ImGui::SetCursorPosY(avail.y * 0.4f);
-        ImGui::TextDisabled("No script open");
+        bool isUnsaved() const { return path.empty(); }
+    };
 
-        float btnW = 120.f;
-        ImGui::SetCursorPosX((avail.x - btnW) * 0.5f);
-        if (ImGui::Button("New Script", { btnW, 0 }))
-            OpenBlank();
+    int  TabCount() const  { return static_cast<int>(m_Tabs.size()); }
+    bool HasActive() const { return m_ActiveTab >= 0 && m_ActiveTab < TabCount(); }
+    Tab& Active()          { return m_Tabs[m_ActiveTab]; }
+
+    void ApplyEditorSettings(TextEditor& ed)
+    {
+        ed.SetPalette(m_CurrentTheme == 1
+                      ? TextEditor::GetLightPalette()
+                      : TextEditor::GetDarkPalette());
+
+        ed.SetShowWhitespacesEnabled(m_ShowWhitespaces);
+    }
+
+    void PushTab(const std::string& name,
+                 const std::string& path,
+                 const std::string& source)
+    {
+        m_Tabs.emplace_back();
+        Tab& tab  = m_Tabs.back();
+        tab.id    = ++m_NextTabId;
+        tab.name  = name;
+        tab.path  = path;
+        tab.dirty = false;
+
+        tab.editor.SetLanguage(TextEditor::Language::Lua());
+        tab.editor.SetShowLineNumbersEnabled(true);
+        tab.editor.SetShowScrollbarMiniMapEnabled(true);
+        tab.editor.SetShowMatchingBrackets(true);
+        tab.editor.SetAutoIndentEnabled(true);
+        tab.editor.SetTabSize(4);
+        tab.editor.SetText(source);
+        ApplyEditorSettings(tab.editor);
+
+        bool* dirtyPtr = &tab.dirty;
+        tab.editor.SetChangeCallback([dirtyPtr]() { *dirtyPtr = true; });
+
+        m_FocusNewTab = true;
+        SwitchToTab(TabCount() - 1);
+    }
+
+    void SwitchToTab(int index)
+    {
+        if (index >= 0 && index < TabCount())
+            m_ActiveTab = index;
+    }
+
+    void CloseTab(int index)
+    {
+        if (index < 0 || index >= TabCount()) return;
+        m_Tabs.erase(m_Tabs.begin() + index);
+
+        if (m_Tabs.empty()) { m_ActiveTab = -1; return; }
+
+        if (m_ActiveTab >= index)
+            m_ActiveTab = std::max(0, m_ActiveTab - 1);
     }
 
 
+    void RenderEmptyState()
+    {
+        ImVec2 avail = ImGui::GetContentRegionAvail();
+        ImGui::SetCursorPosX((avail.x - ImGui::CalcTextSize("No script open").x) * 0.5f);
+        ImGui::SetCursorPosY(avail.y * 0.4f);
+        ImGui::TextDisabled("No script open");
+
+        constexpr float btnW = 120.f;
+        ImGui::SetCursorPosX((avail.x - btnW) * 0.5f);
+        if (ImGui::Button("New Script", {btnW, 0}))
+            OpenBlank();
+    }
+
     void RenderTabs()
     {
-        if (ImGui::BeginTabBar("##scripts"))
+        if (!ImGui::BeginTabBar("##scripts")) return;
+
+        for (int i = 0; i < TabCount(); ++i)
         {
-            for (int i = 0; i < (int)m_Buffers.size(); ++i)
+
+            std::string label = m_Tabs[i].name;
+            if (m_Tabs[i].dirty) label += " *";
+            label += "##" + std::to_string(m_Tabs[i].id);
+
+            ImGuiTabItemFlags flags = ImGuiTabItemFlags_None;
+            if (m_FocusNewTab && i == TabCount() - 1)
             {
-                std::string label = m_Buffers[i].GetName();
-                if (m_Buffers[i].IsDirty())
-                    label += " *";
-                label += "##" + std::to_string(i);
-
-                ImGuiTabItemFlags flags = ImGuiTabItemFlags_None;
-                if (m_FocusNewTab && i == (int)m_Buffers.size() - 1)
-                {
-                    flags         = ImGuiTabItemFlags_SetSelected;
-                    m_FocusNewTab = false;
-                }
-
-                bool open = true;
-                if (ImGui::BeginTabItem(label.c_str(), &open, flags))
-                {
-                    if (m_ImGuiActiveTab != i)
-                    {
-                        FlushStagingBuffer();
-                        m_ImGuiActiveTab = i;
-                        m_ActiveTab      = i;
-                        SyncStagingBuffer();
-                    }
-                    ImGui::EndTabItem();
-                }
-
-                if (!open)
-                {
-                    CloseTab(i);
-                    break;
-                }
+                flags         = ImGuiTabItemFlags_SetSelected;
+                m_FocusNewTab = false;
             }
 
-            if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing))
-                OpenBlank();
+            bool open = true;
+            if (ImGui::BeginTabItem(label.c_str(), &open, flags))
+            {
+                m_ActiveTab = i;
+                ImGui::EndTabItem();
+            }
 
-            ImGui::EndTabBar();
+            if (!open) { CloseTab(i); break; }
         }
+
+        if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing))
+            OpenBlank();
+
+        ImGui::EndTabBar();
     }
 
     void RenderToolbar()
     {
+        if (!HasActive()) return;
+        TextEditor& ed = Active().editor;
+
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 0.2f, 1.f));
-        if (ImGui::Button("Run ▶"))
-        {
-            FlushStagingBuffer();
-            m_RunRequested = true;
-            m_LastError.clear();
-        }
+        if (ImGui::Button("Run \xE2\x96\xB6")) { m_RunRequested = true; ClearError(); }
         ImGui::PopStyleColor();
-
         ImGui::SameLine();
 
-        bool canSave = HasActiveBuffer() && ActiveBuffer().IsDirty();
-        if (!canSave)
         {
-            ImGui::BeginDisabled();
-            ImGui::Button("Save");
-            ImGui::EndDisabled();
+            bool canSave = Active().dirty;
+            if (!canSave) ImGui::BeginDisabled();
+            if (ImGui::Button("Save")) SaveActive();
+            if (!canSave) ImGui::EndDisabled();
         }
-        else if (ImGui::Button("Save"))
+        ImGui::SameLine();
+
         {
-            SaveActiveBuffer();
+            bool canReload = !Active().isUnsaved() && !Active().dirty;
+            if (!canReload) ImGui::BeginDisabled();
+            if (ImGui::Button("Reload")) ReloadActive();
+            if (!canReload) ImGui::EndDisabled();
         }
 
         ImGui::SameLine();
+        ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        ImGui::SameLine();
 
-        bool canReload = HasActiveBuffer() && !ActiveBuffer().IsUnsaved();
-        if (!canReload)
         {
-            ImGui::BeginDisabled();
-            ImGui::Button("Reload");
-            ImGui::EndDisabled();
+            bool can = ed.CanUndo();
+            if (!can) ImGui::BeginDisabled();
+            if (ImGui::Button("Undo")) ed.Undo();
+            if (!can) ImGui::EndDisabled();
         }
-        else if (ImGui::Button("Reload"))
+        ImGui::SameLine();
         {
-            ReloadActiveBuffer();
+            bool can = ed.CanRedo();
+            if (!can) ImGui::BeginDisabled();
+            if (ImGui::Button("Redo")) ed.Redo();
+            if (!can) ImGui::EndDisabled();
+        }
+        ImGui::SameLine();
+
+        if (ImGui::Button("Copy"))  ed.Copy();
+        ImGui::SameLine();
+        if (ImGui::Button("Paste")) ed.Paste();
+
+        ImGui::SameLine();
+        ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        ImGui::SameLine();
+
+        if (ImGui::Button("Find"))
+            ed.OpenFindReplaceWindow();
+
+        ImGui::SameLine();
+        ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+        ImGui::SameLine();
+
+        ImGui::SetNextItemWidth(80.f);
+        const char* themes[] = { "Dark", "Light" };
+        if (ImGui::Combo("##Theme", &m_CurrentTheme, themes, 2))
+        {
+            for (auto& tab : m_Tabs)
+                ApplyEditorSettings(tab.editor);
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Whitespace", &m_ShowWhitespaces))
+        {
+            for (auto& tab : m_Tabs)
+                tab.editor.SetShowWhitespacesEnabled(m_ShowWhitespaces);
         }
     }
-
 
     void RenderTextArea()
     {
-        float statusBarH = ImGui::GetFrameHeightWithSpacing() + 4.f;
+        if (!HasActive()) return;
 
-        ImVec2 textSize = ImGui::GetContentRegionAvail();
-        textSize.y -= statusBarH;
-        if (textSize.y < 0.f)
-            textSize.y = 0.f;
+        const float statusBarH = ImGui::GetFrameHeightWithSpacing() + 4.f;
+        ImVec2 size            = ImGui::GetContentRegionAvail();
+        size.y -= statusBarH;
+        if (size.y < 0.f) size.y = 0.f;
 
-        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 8));
 
-        std::string widgetId = "##source_" + std::to_string(m_ActiveTab);
-
-        bool changed = ImGui::InputTextMultiline(
-            widgetId.c_str(),
-            m_StagingBuffer.data(),
-            m_StagingBuffer.size(),
-            textSize,
-            ImGuiInputTextFlags_AllowTabInput);
-
-        ImGui::PopStyleVar();
-
-        if (changed && HasActiveBuffer())
-            ActiveBuffer().SetText(m_StagingBuffer.data());
+        std::string id = "##editor_" + std::to_string(Active().id);
+        Active().editor.Render(id.c_str(), size, false);
     }
-
 
     void RenderStatusBar()
     {
@@ -245,7 +347,7 @@ private:
             ImGui::TextUnformatted(m_LastError.c_str());
             ImGui::PopStyleColor();
         }
-        else if (HasActiveBuffer() && ActiveBuffer().IsDirty())
+        else if (HasActive() && Active().dirty)
         {
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.8f, 0.4f, 1.f));
             ImGui::TextUnformatted("Modified");
@@ -257,144 +359,90 @@ private:
             ImGui::TextUnformatted("Ready");
             ImGui::PopStyleColor();
         }
-    }
 
-
-    void SwitchToTab(int index)
-    {
-        FlushStagingBuffer();
-        m_ActiveTab      = index;
-        m_ImGuiActiveTab = index;
-        SyncStagingBuffer();
-    }
-
-    void CloseTab(int index)
-    {
-        m_Buffers.erase(m_Buffers.begin() + index);
-
-        if (m_Buffers.empty())
+        if (HasActive())
         {
-            m_ActiveTab      = -1;
-            m_ImGuiActiveTab = -1;
-            m_StagingBuffer[0] = '\0';
+            auto pos = Active().editor.GetMainCursorPosition();
+            char buf[40];
+            snprintf(buf, sizeof(buf), "Ln %d  Col %d", pos.line + 1, pos.column + 1);
+            ImGui::SameLine(ImGui::GetWindowWidth() - ImGui::CalcTextSize(buf).x - 8.f);
+            ImGui::TextDisabled("%s", buf);
+        }
+    }
+
+    void SaveActive()
+    {
+        if (!HasActive()) return;
+        Tab& tab = Active();
+
+        if (!tab.isUnsaved())
+        {
+            WriteToDisk(tab, tab.path);
             return;
         }
 
-        int next = std::min(index, (int)m_Buffers.size() - 1);
-        SwitchToTab(next);
-    }
-
-
-    void SaveActiveBuffer()
-    {
-        if (!HasActiveBuffer()) return;
-
-        ScriptBuffer& buf = ActiveBuffer();
-
-        if (!buf.IsUnsaved())
-        {
-            WriteBufferToDisk(buf, buf.GetPath());
-            return;
-        }
-
-        std::string relativePath = "scripts/" + buf.GetName();
-        std::string fullPath     = m_Assets.ResolvePath(relativePath);
-
+        std::string fullPath = m_Assets.ResolvePath("scripts/" + tab.name);
         std::filesystem::create_directories(
             std::filesystem::path(fullPath).parent_path());
 
-        if (!WriteBufferToDisk(buf, fullPath))
-            return;
-
-        // Give the buffer a real path now that it exists on disk.
-        buf.SetPath(fullPath);
-
-        // Tell the asset manager a new file appeared so it shows up
-        // in the asset panel without a manual refresh.
-        m_Assets.Refresh();
+        tab.path = fullPath;
+        if (!WriteToDisk(tab, fullPath))
+            tab.path.clear();
+        else
+            m_Assets.Refresh();
     }
 
-    bool WriteBufferToDisk(ScriptBuffer& buf, const std::string& fullPath)
+    bool WriteToDisk(Tab& tab, const std::string& fullPath)
     {
         if (fullPath.empty()) return false;
 
-        std::ofstream file(fullPath);
+        std::ofstream file(fullPath, std::ios::binary);
         if (!file.is_open())
         {
             Log::Error("ScriptEditor", "Failed to open '{}' for writing", fullPath);
             return false;
         }
 
-        file << buf.GetText();
-        buf.MarkClean();
+        file << tab.editor.GetText();
+        tab.dirty = false;
         Log::Info("ScriptEditor", "Saved '{}'", fullPath);
         return true;
     }
 
-    void ReloadActiveBuffer()
+    void ReloadActive()
     {
-        if (!HasActiveBuffer()) return;
+        if (!HasActive()) return;
+        Tab& tab = Active();
+        if (tab.isUnsaved()) return;
 
-        ScriptBuffer& buf = ActiveBuffer();
-        if (buf.IsUnsaved()) return;
-
-        std::ifstream file(buf.GetPath());
+        std::ifstream file(tab.path, std::ios::binary);
         if (!file.is_open())
         {
-            Log::Error("ScriptEditor", "Cannot reload '{}': file not found",
-                       buf.GetPath());
+            Log::Error("ScriptEditor", "Cannot reload '{}': not found", tab.path);
             return;
         }
 
-        std::string source(
-            (std::istreambuf_iterator<char>(file)),
-            std::istreambuf_iterator<char>());
-
-        buf.SetText(std::move(source));
-        buf.MarkClean();
-        SyncStagingBuffer();
+        std::string source((std::istreambuf_iterator<char>(file)),
+                            std::istreambuf_iterator<char>());
+        tab.editor.SetText(source);
+        tab.dirty = false;
+        ClearError();
     }
-
-
-    void SyncStagingBuffer()
-    {
-        if (!HasActiveBuffer())
-        {
-            m_StagingBuffer[0] = '\0';
-            return;
-        }
-
-        const std::string& text = ActiveBuffer().GetText();
-        size_t len = std::min(text.size(), k_StagingCapacity - 1);
-        std::memcpy(m_StagingBuffer.data(), text.data(), len);
-        m_StagingBuffer[len] = '\0';
-    }
-
-    void FlushStagingBuffer()
-    {
-        if (!HasActiveBuffer()) return;
-        ActiveBuffer().SetText(m_StagingBuffer.data());
-    }
-
-    //  Utilities
-
-    bool                HasActiveBuffer() const { return m_ActiveTab >= 0 && m_ActiveTab < (int)m_Buffers.size(); }
-    ScriptBuffer&       ActiveBuffer()          { return m_Buffers[m_ActiveTab]; }
-    const ScriptBuffer& ActiveBuffer()  const   { return m_Buffers[m_ActiveTab]; }
 
 #endif // CADMIUM_IMGUI
-
-
-    AssetManager&             m_Assets;
-    std::vector<ScriptBuffer> m_Buffers;
-    int                       m_ImGuiActiveTab{-1};
-    int                       m_ActiveTab{-1};
-    bool                      m_RunRequested{false};
-    std::string               m_LastError;
-    bool                      m_FocusNewTab{false};
-
-    static constexpr size_t k_StagingCapacity = 512 * 1024;
-    std::vector<char>       m_StagingBuffer;
+    AssetManager& m_Assets;
+#ifdef CADMIUM_IMGUI
+    // std::deque: push_back never relocates existing elements, so the
+    // &tab.dirty pointer captured in each SetChangeCallback is always valid.
+    std::deque<Tab> m_Tabs;
+    int             m_ActiveTab     {-1};
+    bool            m_RunRequested  {false};
+    std::string     m_LastError;
+    bool            m_FocusNewTab   {false};
+    uint64_t        m_NextTabId     {0};
+    int             m_CurrentTheme  {0};          // 0 = Dark, 1 = Light
+    bool            m_ShowWhitespaces{false};
+#endif
 };
 
 } // namespace Cadmium::Editor

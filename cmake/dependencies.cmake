@@ -50,6 +50,22 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(imgui)
 include(cmake/imgui.cmake)
+
+FetchContent_Declare(
+    colortextedit
+    GIT_REPOSITORY https://github.com/goossens/ImGuiColorTextEdit.git
+    GIT_TAG a74fb090d2ea9276ae6c35c2f6ab39491c7d404f
+)
+FetchContent_MakeAvailable(colortextedit)
+include(cmake/colortextedit.cmake)
+
+FetchContent_Declare(
+    emscripten_browser_clipboard
+    GIT_REPOSITORY https://github.com/Armchair-Software/emscripten-browser-clipboard.git
+    GIT_TAG        5a962a041a11bf2f5948a5b9f5470eee4476274d
+)
+FetchContent_MakeAvailable(emscripten_browser_clipboard)
+
 endif()
 
 if(NOT EMSCRIPTEN)

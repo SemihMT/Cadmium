@@ -33,6 +33,8 @@ if(EMSCRIPTEN)
         -sALLOW_MEMORY_GROWTH=1
         -sASSERTIONS=1
         -sNO_DISABLE_EXCEPTION_CATCHING
+        -sASYNCIFY
+        "-sASYNCIFY_IMPORTS=[\"copy\",\"paste\"]"
         --emrun
         "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/engine/assets@/assets"
         "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/sandbox/assets@/assets"
