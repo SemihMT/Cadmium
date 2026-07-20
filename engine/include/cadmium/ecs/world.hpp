@@ -4,8 +4,6 @@
 #include <cadmium/core/logger.hpp>
 #include <cadmium/ecs/registry.hpp>
 #include <cadmium/ecs/system_scheduler.hpp>
-#include <cadmium/scripting/lua_type_registry.hpp>
-#include <cadmium/ecs/lua_component.hpp>
 
 namespace Cadmium
 {
@@ -67,85 +65,6 @@ namespace Cadmium
       return m_Registry.QueryEntities<T, Rest...>();
     }
 
-    // Lua Component API
-    // Called by Component.Register binding - registers the schema and
-    // assigns it a ComponentID from the global counter
-    ComponentID RegisterLuaComponent(LuaComponentSchema schema)
-    {
-       const LuaComponentSchema* existing = m_LuaTypes.Find(schema.typeName);
-       if (existing)
-         return existing->id;
-
-       schema.id = NextComponentID();
-       ComponentID id = schema.id;
-       m_LuaTypes.Register(std::move(schema));
-       return id;
-    }
-
-    void AddLuaComponent(Entity e, const std::string &typeName,
-                         std::unordered_map<std::string, LuaFieldValue> initValues = {})
-    {
-      const LuaComponentSchema *schema = m_LuaTypes.Find(typeName);
-      if (!schema)
-      {
-        Cadmium::Log::Warn("World", "Unknown Lua component type: {}", typeName.c_str());
-        return;
-      }
-
-      LuaComponentData data = LuaComponentData::FromSchema(*schema);
-      for (auto &[field, value] : initValues)
-      {
-        if (!data.values.contains(field))
-        {
-          Cadmium::Log::Warn("World", "Unknown field '{}' on '{}'", field.c_str(), typeName.c_str());
-          continue;
-        }
-        // Variant index must match - enforced at binding layer
-        data.values[field] = std::move(value);
-      }
-
-      m_Registry.AddLuaComponent(e, schema->id, std::move(data));
-    }
-
-    void RemoveLuaComponent(Entity e, const std::string &typeName)
-    {
-      const LuaComponentSchema *schema = m_LuaTypes.Find(typeName);
-      if (schema)
-        m_Registry.RemoveLuaComponent(e, schema->id);
-    }
-
-    bool HasLuaComponent(Entity e, const std::string &typeName) const
-    {
-      const LuaComponentSchema *schema = m_LuaTypes.Find(typeName);
-      return schema && m_Registry.HasLuaComponent(e, schema->id);
-    }
-
-    LuaComponentData *TryGetLuaComponent(Entity e, const std::string &typeName)
-    {
-      const LuaComponentSchema *schema = m_LuaTypes.Find(typeName);
-      if (!schema)
-        return nullptr;
-      return m_Registry.TryGetLuaComponent(e, schema->id);
-    }
-
-    std::vector<std::pair<Entity, LuaComponentData *>>
-    Query(const std::string &typeName)
-    {
-      const LuaComponentSchema *schema = m_LuaTypes.Find(typeName);
-      if (!schema)
-        return {};
-      return m_Registry.QueryLua(schema->id);
-    }
-
-    // Called by EntityRegistry::FlushDestroyed
-    void RemoveAllLuaComponents(Entity e)
-    {
-      std::vector<ComponentID> ids;
-      for (const auto &[name, schema] : m_LuaTypes.All())
-        ids.push_back(schema.id);
-      m_Registry.RemoveAllLuaComponents(e, ids);
-    }
-
     // System API - forwarded from Scheduler
     template <typename T, typename... Args>
     T &RegisterSystem(int order, Args &&...args)
@@ -170,7 +89,6 @@ namespace Cadmium
   private:
     Registry m_Registry;
     SystemScheduler m_Scheduler;
-    LuaTypeRegistry m_LuaTypes;
   };
 
 } // namespace Cadmium

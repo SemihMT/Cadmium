@@ -1,9 +1,6 @@
 #include <cadmium/core/engine.hpp>
 #include <cadmium/core/assets.hpp>
 #include <cadmium/core/logger.hpp>
-#include <cadmium/scripting/lua_bindings_entity.hpp>
-#include <cadmium/scripting/lua_bindings_assets.hpp>
-#include <cadmium/scripting/lua_bindings_components.hpp>
 #include <stdexcept>
 #include <algorithm>
 
@@ -125,9 +122,6 @@ namespace Cadmium
     }
     m_Input.SnapshotPost();
 
-    m_SceneState.Time += dt;
-    m_SceneState.DeltaTime = dt;
-
     m_Accumulator += dt;
     while (m_Accumulator >= m_FixedTimestep)
     {
@@ -178,16 +172,6 @@ namespace Cadmium
       layer->OnImGuiRender();
     m_ImGuiLayer.End(m_Renderer);
 
-     if (m_UseViewport && m_Viewport.IsReady())
-    {
-      m_SceneState.Width = static_cast<float>(m_Viewport.GetWidth());
-      m_SceneState.Height = static_cast<float>(m_Viewport.GetHeight());
-    }
-    else
-    {
-      m_SceneState.Width = static_cast<float>(m_Width);
-      m_SceneState.Height = static_cast<float>(m_Height);
-    }
 
 
     SDL_RenderPresent(m_Renderer);
@@ -368,11 +352,6 @@ namespace Cadmium
   InputManager &Engine::GetInput()
   {
     return m_Input;
-  }
-
-  Lua::SceneBindingState &Engine::GetSceneState()
-  {
-    return m_SceneState;
   }
 }
  // namespace Cadmium

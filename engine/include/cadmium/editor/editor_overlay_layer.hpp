@@ -23,10 +23,9 @@ namespace Cadmium::Editor
 class EditorOverlayLayer : public Layer
 {
 public:
-    EditorOverlayLayer(AssetManager& assets, IScriptController& controller, IEngineContext* context)
+    EditorOverlayLayer(AssetManager& assets, IEngineContext* context)
         : Layer("EditorOverlayLayer")
         , m_Assets(assets)
-        , m_Controller(controller)
         , m_ScriptPanel(assets)
         , m_AssetPanel(assets)
         , m_Context(context)
@@ -38,8 +37,6 @@ public:
         m_AssetPanel.SetOnSelect(
             [this](const std::string& relativePath, AssetType type)
             {
-                if (type != AssetType::Script) return;
-                m_ScriptPanel.OpenScript(m_Assets.ResolvePath(relativePath));
             });
     }
 
@@ -75,13 +72,10 @@ public:
         SetupDockspace();
 
         m_AssetPanel.Render("Assets");
-        m_ScriptPanel.Render("Script Editor");
         m_Console.Render("Console");
         m_ViewportPanel.Render(m_Context->GetViewport(), "Viewport");
 #endif
     }
-
-    ScriptEditorPanel& GetScriptPanel() { return m_ScriptPanel; }
 
 private:
 #ifdef CADMIUM_IMGUI
@@ -143,7 +137,6 @@ private:
 
         ImGui::DockBuilderDockWindow("Assets", leftId);
         ImGui::DockBuilderDockWindow("Viewport", gameId);
-        ImGui::DockBuilderDockWindow("Script Editor", editorId);
         ImGui::DockBuilderDockWindow("Console", bottomId);
 
         ImGui::DockBuilderFinish(dockId);
@@ -151,12 +144,10 @@ private:
 #endif
 
     AssetManager&      m_Assets;
-    IScriptController& m_Controller;
     IEngineContext*    m_Context {nullptr};
     EditorState        m_State{EditorState::Edit};
     bool               m_DockLayoutBuilt{false};
 
-    ScriptEditorPanel  m_ScriptPanel;
     AssetPanel         m_AssetPanel;
     ConsolePanel       m_Console;
     ToolbarPanel       m_Toolbar;

@@ -78,9 +78,5 @@ namespace Cadmium
   {
     return m_Context->GetInput();
   }
-  Lua::SceneBindingState &Scene::GetSceneState()
-  {
-    return m_Context->GetSceneState();
-  }
 }
 // namespace Cadmium

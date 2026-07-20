@@ -2,7 +2,6 @@
 #define CADMIUM_ENGINE_HPP
 
 #include <cadmium/core/draw_command_queue.hpp>
-#include <cadmium/scripting/lua_bindings.hpp>
 #include <cadmium/editor/render_viewport.hpp>
 #include <cadmium/assets/asset_manager.hpp>
 #include <cadmium/core/engine_context.hpp>
@@ -62,7 +61,6 @@ namespace Cadmium
     DrawCommandQueue& GetDrawQueue() override;
     AssetManager& GetAssets() override;
     InputManager& GetInput() override;
-    Lua::SceneBindingState& GetSceneState() override;
     SDL_Texture* GetRenderTarget() override;
     void EnableViewport(int w, int h) override;
     void DisableViewport() override;
@@ -88,7 +86,6 @@ namespace Cadmium
     InputManager m_Input{};
     DrawCommandQueue m_DrawQueue{};
     AssetManager m_AssetManager{};
-    Lua::SceneBindingState m_SceneState{};
     Editor::RenderViewport m_Viewport{};
 
     int m_Width{0};

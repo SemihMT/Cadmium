@@ -48,7 +48,6 @@ namespace Cadmium
     DrawCommandQueue& GetDrawQueue() override { return m_DrawQueue; }
     AssetManager& GetAssets() override { return m_Assets; }
     InputManager& GetInput() override {};
-    Lua::SceneBindingState& GetSceneState() override {};
     SDL_Texture* GetRenderTarget() override { return nullptr; }
     void EnableViewport(int w, int h) override  {}
     void DisableViewport() override {}

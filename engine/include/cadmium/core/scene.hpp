@@ -52,8 +52,6 @@ namespace Cadmium
     DrawCommandQueue &GetDrawQueue();
     AssetManager& GetAssets();
     InputManager& GetInput();
-    Lua::SceneBindingState& GetSceneState();
-
 
     template <typename T>
     void Post(const T &event)

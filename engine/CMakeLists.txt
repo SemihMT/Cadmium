@@ -9,9 +9,6 @@ add_library(cadmium-engine STATIC
     src/core/scene.cpp
     src/core/input_manager.cpp
     src/core/logger.cpp
-    src/scripting/scripted_scene.cpp
-    src/scripting/lua_bindings.cpp
-    src/scripting/script_host.cpp
     src/assets/asset_manager.cpp
 )
 

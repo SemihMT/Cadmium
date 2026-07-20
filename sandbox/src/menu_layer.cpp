@@ -1,7 +1,6 @@
 #include "menu_layer.hpp"
 #include "asteroids_scene.hpp"
 #include "stress_scene.hpp"
-#include <cadmium/scripting/scripted_scene.hpp>
 namespace Sandbox
 {
   void MenuLayer::OnEvent(SDL_Event& event)
@@ -56,9 +55,10 @@ namespace Sandbox
     ImGui::SetCursorPosX((w - buttonW) * 0.5f);
     if (ImGui::Button("Lua Scripting", {buttonW, buttonH}))
     {
-      auto scene = Cadmium::ScriptedScene::FromFile("assets/scripts/main.lua");
-      scene->EnableEditor(GetAssets());
-      ReplaceScene(std::move(scene));
+      //TODO: REINTRODUCE THE SCRIPT EDITOR HERE
+      //auto scene = Cadmium::ScriptedScene::FromFile("assets/scripts/main.lua");
+      //scene->EnableEditor(GetAssets());
+      //ReplaceScene(std::move(scene));
     }
 
     ImGui::Spacing();
