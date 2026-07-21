@@ -8,6 +8,8 @@
 #include <glm/gtx/euler_angles.hpp>
 #include <glm/gtx/matrix_decompose.hpp>
 
+#include <sol/sol.hpp>
+
 namespace Cadmium
 {
   struct Transform
@@ -128,6 +130,12 @@ namespace Cadmium
   struct Tag
   {
     std::string name;
+  };
+
+  struct Script
+  {
+    sol::table self;
+    sol::function onUpdate;
   };
 
 } // namespace Cadmium

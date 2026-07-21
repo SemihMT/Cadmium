@@ -1,6 +1,7 @@
 #ifndef CADMIUM_LAYER_HPP
 #define CADMIUM_LAYER_HPP
 
+#include "cadmium/editor/render_viewport.hpp"
 #include <cadmium/core/engine_context.hpp>
 #include <SDL3/SDL.h>
 #include <functional>
@@ -40,6 +41,7 @@ namespace Cadmium
     void PopLayer(const std::string &name)          { m_Context->PopLayer(name); }
     void PopOverlay(const std::string &name)        { m_Context->PopOverlay(name); }
     AssetManager& GetAssets()                       { return m_Context->GetAssets(); }
+    Editor::RenderViewport& GetViewport()           { return m_Context->GetViewport(); }
     World &GetWorld();
 
     void PushScene(std::unique_ptr<Scene> scene);

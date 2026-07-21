@@ -1,357 +1,384 @@
-#include <cadmium/core/engine.hpp>
-#include <cadmium/core/assets.hpp>
-#include <cadmium/core/logger.hpp>
-#include <stdexcept>
+#include "cadmium/core/layer.hpp"
 #include <algorithm>
+#include <cadmium/core/assets.hpp>
+#include <cadmium/core/engine.hpp>
+#include <cadmium/core/logger.hpp>
+#include <memory>
+#include <stdexcept>
+
 
 namespace Cadmium
 {
 #ifdef CADMIUM_PLATFORM_WEB
-  Engine *Engine::s_Instance = nullptr;
-  void Engine::StaticIterate() { s_Instance->Iterate(); }
+    Engine* Engine::s_Instance = nullptr;
+    void Engine::StaticIterate()
+    {
+        s_Instance->Iterate();
+    }
 #endif
 
-  Engine::Engine(const char *title, int width, int height)
-      : m_Width{width}, m_Height{height}
-  {
-    Cadmium::AddStdoutSink();
-    Cadmium::Log::Info("Engine", "Initializing engine!");
-    m_AssetManager.SetProjectRoot(AssetPath("assets/"));
+    Engine::Engine(const char* title, int width, int height) : m_Width{width}, m_Height{height}
+    {
+        Cadmium::AddStdoutSink();
+        Cadmium::Log::Info("Engine", "Initializing engine!");
+        m_AssetManager.SetProjectRoot(AssetPath("assets/"));
 
-    if (!SDL_Init(SDL_INIT_VIDEO))
-      throw std::runtime_error(SDL_GetError());
+        if (!SDL_Init(SDL_INIT_VIDEO))
+            throw std::runtime_error(SDL_GetError());
 
-    m_Window = SDL_CreateWindow(title, width, height, 0);
-    if (!m_Window)
-      throw std::runtime_error(SDL_GetError());
+        m_Window = SDL_CreateWindow(title, width, height, 0);
+        if (!m_Window)
+            throw std::runtime_error(SDL_GetError());
 
-    m_Renderer = SDL_CreateRenderer(m_Window, nullptr);
-    if (!m_Renderer)
-      throw std::runtime_error(SDL_GetError());
+        m_Renderer = SDL_CreateRenderer(m_Window, nullptr);
+        if (!m_Renderer)
+            throw std::runtime_error(SDL_GetError());
 
-    m_AssetManager.Init(m_Renderer);
+        m_AssetManager.Init(m_Renderer);
 
-    if(!TTF_Init())
-      throw std::runtime_error(SDL_GetError());
+        if (!TTF_Init())
+            throw std::runtime_error(SDL_GetError());
 
-    m_Font = TTF_OpenFont(AssetPath("assets/fonts/JetBrainsMono-Regular.ttf").c_str(), 96);
-    if (!m_Font)
-      SDL_Log("Failed to load font: %s", SDL_GetError());
+        m_Font = TTF_OpenFont(AssetPath("assets/fonts/JetBrainsMono-Regular.ttf").c_str(), 96);
+        if (!m_Font)
+            SDL_Log("Failed to load font: %s", SDL_GetError());
 
-    m_Frequency = SDL_GetPerformanceFrequency();
-    m_LastCounter = SDL_GetPerformanceCounter();
+        m_Frequency = SDL_GetPerformanceFrequency();
+        m_LastCounter = SDL_GetPerformanceCounter();
 
 #ifdef CADMIUM_PLATFORM_WEB
-    SetVSync(true);
+        SetVSync(true);
 #endif
 
-    TrySetDefaultBackground();
+        TrySetDefaultBackground();
 
-    m_ImGuiLayer.Init(m_Window, m_Renderer);
-  }
+        m_ImGuiLayer.Init(m_Window, m_Renderer);
+    }
 
-  Engine::~Engine()
-  {
-    m_ImGuiLayer.Shutdown();
-    if (m_Font)
-      TTF_CloseFont(m_Font);
-    TTF_Quit();
-    SDL_DestroyRenderer(m_Renderer);
-    SDL_DestroyWindow(m_Window);
-    SDL_Quit();
-  }
+    Engine::~Engine()
+    {
+        m_ImGuiLayer.Shutdown();
+        if (m_Font)
+            TTF_CloseFont(m_Font);
+        TTF_Quit();
+        SDL_DestroyRenderer(m_Renderer);
+        SDL_DestroyWindow(m_Window);
+        SDL_Quit();
+    }
 
-  void Engine::Run()
-  {
-    // Process any scenes pushed after engine init
-    // but before Run() was called
-    m_SceneManager.FlushPending(this);
+    void Engine::Run()
+    {
+        // Process any scenes pushed after engine init
+        // but before Run() was called
+        m_SceneManager.FlushPending(this);
 #ifdef CADMIUM_PLATFORM_WEB
-    s_Instance = this;
-    emscripten_set_main_loop(StaticIterate, 0, 1);
-    // unreachable on web, emscripten_set_main_loop does not return in the traditional sense
-    // Because of that, app shutdown is also handled in iterate()
+        s_Instance = this;
+        emscripten_set_main_loop(StaticIterate, 0, 1);
+        // unreachable on web, emscripten_set_main_loop does not return in the traditional sense
+        // Because of that, app shutdown is also handled in iterate()
 #else
-    while (m_Running)
-      Iterate();
+        while (m_Running)
+            Iterate();
 
-    if (auto *scene = m_SceneManager.GetActiveScene())
-      scene->GetLayerStack().Clear();
+        if (auto* scene = m_SceneManager.GetActiveScene())
+            scene->GetLayerStack().Clear();
+        m_GlobalLayers.Clear();
 #endif
-  }
-
-  void Engine::Iterate()
-  {
-    Uint64 frameStart = SDL_GetPerformanceCounter();
-
-    Uint64 counter = frameStart;
-    float dt = (counter - m_LastCounter) / (float)m_Frequency;
-    m_LastCounter = counter;
-
-    dt = std::min(dt, m_MaxDeltaTime);
-
-    m_Input.BeginFrame();
-
-    Scene *scene = m_SceneManager.GetActiveScene();
-    if (!scene)
-      return;
-
-    auto &layerStack = scene->GetLayerStack();
-    auto &eventBus = scene->GetEventBus();
-
-    SDL_Event event;
-    while (SDL_PollEvent(&event))
-    {
-      m_ImGuiLayer.ProcessEvent(event);
-      if (event.type == SDL_EVENT_QUIT)
-      {
-        RequestQuit();
-      }
-      if (event.type == SDL_EVENT_MOUSE_WHEEL)
-      {
-        m_Input.OnMouseWheel(event.wheel.x, event.wheel.y);
-      }
-      if (event.type == SDL_EVENT_WINDOW_RESIZED)
-      {
-        m_Width = event.window.data1;
-        m_Height = event.window.data2;
-      }
-
-      for (auto it = layerStack.rbegin(); it != layerStack.rend(); ++it)
-        (*it)->OnEvent(event);
-    }
-    m_Input.SnapshotPost();
-
-    m_Accumulator += dt;
-    while (m_Accumulator >= m_FixedTimestep)
-    {
-      for (auto &layer : layerStack)
-        layer->OnFixedUpdate(m_FixedTimestep);
-      scene->GetWorld().Update(m_FixedTimestep);
-      m_Accumulator -= m_FixedTimestep;
     }
 
-    for (auto &layer : layerStack)
-      layer->OnUpdate(dt);
-
-    auto toUint8 = [](float channel)
+    void Engine::Iterate()
     {
-      channel = std::clamp(channel, 0.0f, 1.0f);
-      return static_cast<Uint8>(channel * 255.0f);
-    };
+        Uint64 frameStart = SDL_GetPerformanceCounter();
 
-    SDL_SetRenderDrawColor(m_Renderer,
-                           toUint8(m_ClearColor.r),
-                           toUint8(m_ClearColor.g),
-                           toUint8(m_ClearColor.b),
-                           toUint8(m_ClearColor.a));
+        Uint64 counter = frameStart;
+        float dt = (counter - m_LastCounter) / (float)m_Frequency;
+        m_LastCounter = counter;
 
-    if (m_UseViewport && m_Viewport.IsReady())
+        dt = std::min(dt, m_MaxDeltaTime);
+
+        m_Input.BeginFrame();
+
+        Scene* scene = m_SceneManager.GetActiveScene();
+        if (!scene)
+            return;
+
+        auto& layerStack = scene->GetLayerStack();
+        auto& eventBus = scene->GetEventBus();
+
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
+        {
+            m_ImGuiLayer.ProcessEvent(event);
+            if (event.type == SDL_EVENT_QUIT)
+            {
+                RequestQuit();
+            }
+            if (event.type == SDL_EVENT_MOUSE_WHEEL)
+            {
+                m_Input.OnMouseWheel(event.wheel.x, event.wheel.y);
+            }
+            if (event.type == SDL_EVENT_WINDOW_RESIZED)
+            {
+                m_Width = event.window.data1;
+                m_Height = event.window.data2;
+            }
+
+            for (auto it = m_GlobalLayers.rbegin(); it != m_GlobalLayers.rend(); ++it)
+                (*it)->OnEvent(event);
+
+            for (auto it = layerStack.rbegin(); it != layerStack.rend(); ++it)
+                (*it)->OnEvent(event);
+        }
+        m_Input.SnapshotPost();
+
+        // TODO: expose accumulator to user code as the alpha value between frames for interpolation
+        m_Accumulator += dt;
+        while (m_Accumulator >= m_FixedTimestep)
+        {
+          for (auto &layer : m_GlobalLayers)
+              layer->OnFixedUpdate(m_FixedTimestep);
+
+          for (auto& layer : layerStack)
+              layer->OnFixedUpdate(m_FixedTimestep);
+
+          scene->GetWorld().Update(m_FixedTimestep);
+          m_Accumulator -= m_FixedTimestep;
+        }
+
+        for (auto &layer : m_GlobalLayers)
+            layer->OnUpdate(dt);
+
+        for (auto& layer : layerStack)
+            layer->OnUpdate(dt);
+
+        auto toUint8 = [](float channel)
+        {
+            channel = std::clamp(channel, 0.0f, 1.0f);
+            return static_cast<Uint8>(channel * 255.0f);
+        };
+
+        SDL_SetRenderDrawColor(m_Renderer,
+                               toUint8(m_ClearColor.r),
+                               toUint8(m_ClearColor.g),
+                               toUint8(m_ClearColor.b),
+                               toUint8(m_ClearColor.a));
+
+        if (m_UseViewport && m_Viewport.IsReady())
+        {
+            if (!m_Viewport.Bind())
+                m_UseViewport = false;
+        }
+
+        SDL_RenderClear(m_Renderer);
+
+        if (m_UseDefaultBackground)
+        {
+            SDL_Texture* bg = m_AssetManager.GetTexture(m_DefaultBackgroundHandle);
+            if (bg)
+                SDL_RenderTexture(m_Renderer, bg, nullptr, nullptr);
+        }
+
+        for (auto& layer : layerStack)
+            layer->OnRender(m_Renderer);
+
+        for (auto& layer : m_GlobalLayers)
+            layer->OnRender(m_Renderer);
+
+        if (m_UseViewport && m_Viewport.IsReady())
+            m_Viewport.Unbind();
+
+        m_ImGuiLayer.Begin();
+        for (auto &layer : m_GlobalLayers)
+            layer->OnImGuiRender();
+        for (auto& layer : layerStack)
+            layer->OnImGuiRender();
+        m_ImGuiLayer.End(m_Renderer);
+
+        SDL_RenderPresent(m_Renderer);
+        eventBus.Dispatch();
+        layerStack.FlushPending(this);
+        m_GlobalLayers.FlushPending(this);
+        m_SceneManager.FlushPending(this);
+
+        if (m_TargetFrameNS > 0)
+        {
+            Uint64 now = SDL_GetPerformanceCounter();
+            Uint64 elapsed = now - frameStart;
+
+            Uint64 targetTicks = (m_TargetFrameNS * m_Frequency) / 1'000'000'000ULL;
+
+            if (elapsed < targetTicks)
+            {
+                Uint64 remaining = targetTicks - elapsed;
+
+                Uint32 delayMS = static_cast<Uint32>((remaining * 1000) / m_Frequency);
+
+                if (delayMS > 0)
+                    SDL_Delay(delayMS);
+            }
+        }
+#ifdef CADMIUM_PLATFORM_WEB
+        if (!m_Running)
+        {
+            if (auto* scene = m_SceneManager.GetActiveScene())
+                scene->GetLayerStack().Clear();
+            m_GlobalLayers.Clear();
+            emscripten_cancel_main_loop();
+        }
+#endif
+    }
+    void Engine::TrySetDefaultBackground()
     {
-      if (!m_Viewport.Bind())
+        m_DefaultBackgroundHandle = m_AssetManager.LoadTexture("Cadmium-bg.bmp");
+    }
+
+    void Engine::SetClearColor(float r, float g, float b, float a)
+    {
+        m_ClearColor = {r, g, b, a};
+    }
+
+    void Engine::SetClearColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a)
+    {
+        SetClearColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
+    }
+
+    void Engine::SetVSync(bool enabled)
+    {
+        SDL_SetRenderVSync(m_Renderer, enabled ? 1 : 0);
+    }
+    void Engine::DisableDefaultBackground()
+    {
+        m_UseDefaultBackground = false;
+    }
+    void Engine::EnableViewport(int w, int h)
+    {
+        m_UseViewport = m_Viewport.Init(m_Renderer, w, h);
+    }
+    void Engine::ResizeViewport(int w, int h)
+    {
+        m_UseViewport = m_Viewport.Resize(w, h);
+    }
+    void Engine::DisableViewport()
+    {
         m_UseViewport = false;
     }
-
-    SDL_RenderClear(m_Renderer);
-
-    if (m_UseDefaultBackground)
+    SDL_Texture* Engine::GetRenderTarget()
     {
-      SDL_Texture *bg = m_AssetManager.GetTexture(m_DefaultBackgroundHandle);
-      if (bg)
-        SDL_RenderTexture(m_Renderer, bg, nullptr, nullptr);
+        return m_UseViewport ? m_Viewport.GetTexture() : nullptr;
+    }
+    Editor::RenderViewport& Engine::GetViewport()
+    {
+        return m_Viewport;
+    }
+    SDL_Renderer* Engine::GetRenderer() const
+    {
+        return m_Renderer;
+    }
+    void Engine::SetTargetFPS(int fps)
+    {
+        m_TargetFrameNS = (fps > 0) ? static_cast<Uint64>(1e9 / fps) : 0ULL;
+    }
+    void Engine::PushGlobalOverlay(std::unique_ptr<Layer> layer)
+    {
+        m_GlobalLayers.PushOverlay(std::move(layer), this);
+    }
+    // IEngineContext API:
+    void Engine::RequestQuit()
+    {
+        m_Running = false;
     }
 
-    for (auto &layer : layerStack)
-      layer->OnRender(m_Renderer);
-
-    if (m_UseViewport && m_Viewport.IsReady())
-      m_Viewport.Unbind();
-
-    m_ImGuiLayer.Begin();
-    for (auto &layer : layerStack)
-      layer->OnImGuiRender();
-    m_ImGuiLayer.End(m_Renderer);
-
-
-
-    SDL_RenderPresent(m_Renderer);
-    eventBus.Dispatch();
-    layerStack.FlushPending(this);
-    m_SceneManager.FlushPending(this);
-
-    if (m_TargetFrameNS > 0)
+    int Engine::GetWidth() const
     {
-      Uint64 now = SDL_GetPerformanceCounter();
-      Uint64 elapsed = now - frameStart;
-
-      Uint64 targetTicks =
-          (m_TargetFrameNS * m_Frequency) / 1'000'000'000ULL;
-
-      if (elapsed < targetTicks)
-      {
-        Uint64 remaining = targetTicks - elapsed;
-
-        Uint32 delayMS =
-            static_cast<Uint32>((remaining * 1000) / m_Frequency);
-
-        if (delayMS > 0)
-          SDL_Delay(delayMS);
-      }
+        return (m_UseViewport && m_Viewport.IsReady()) ? m_Viewport.GetWidth() : m_Width;
     }
-#ifdef CADMIUM_PLATFORM_WEB
-    if (!m_Running)
+
+    int Engine::GetHeight() const
     {
-      if (auto *scene = m_SceneManager.GetActiveScene())
-        scene->GetLayerStack().Clear();
-      emscripten_cancel_main_loop();
+        return (m_UseViewport && m_Viewport.IsReady()) ? m_Viewport.GetHeight() : m_Height;
     }
-#endif
-  }
-  void Engine::TrySetDefaultBackground()
-  {
-    m_DefaultBackgroundHandle = m_AssetManager.LoadTexture("Cadmium-bg.bmp");
-  }
 
-  void Engine::SetClearColor(float r, float g, float b, float a)
-  {
-    m_ClearColor = {r, g, b, a};
-  }
+    void Engine::SetDefaultBackground(bool enabled)
+    {
+        m_UseDefaultBackground = enabled;
+    }
 
-  void Engine::SetClearColor(Uint8 r, Uint8 g, Uint8 b, Uint8 a)
-  {
-    SetClearColor(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
-  }
+    Scene* Engine::GetActiveScene()
+    {
+        return m_SceneManager.GetActiveScene();
+    }
 
-  void Engine::SetVSync(bool enabled)
-  {
-    SDL_SetRenderVSync(m_Renderer, enabled ? 1 : 0);
-  }
-  void Engine::DisableDefaultBackground()
-  {
-    m_UseDefaultBackground = false;
-  }
-  void Engine::EnableViewport(int w, int h)
-  {
-    m_UseViewport = m_Viewport.Init(m_Renderer, w, h);
-  }
-  void Engine::ResizeViewport(int w, int h)
-  {
-    m_UseViewport = m_Viewport.Resize(w, h);
-  }
-  void Engine::DisableViewport()
-  {
-      m_UseViewport = false;
-  }
-  SDL_Texture *Engine::GetRenderTarget()
-  {
-    return m_UseViewport ? m_Viewport.GetTexture() : nullptr;
-  }
-  Editor::RenderViewport& Engine::GetViewport() { return m_Viewport; }
-  SDL_Renderer *Engine::GetRenderer() const { return m_Renderer; }
-  void Engine::SetTargetFPS(int fps)
-  {
-    m_TargetFrameNS = (fps > 0)
-                          ? static_cast<Uint64>(1e9 / fps)
-                          : 0ULL;
-  }
-  // IEngineContext API:
-  void Engine::RequestQuit()
-  {
-    m_Running = false;
-  }
+    void Engine::PushLayer(std::unique_ptr<Layer> layer)
+    {
+        Scene* scene = m_SceneManager.GetActiveScene();
+        if (!scene)
+            throw std::runtime_error("PushLayer called with no active scene");
+        scene->GetLayerStack().RequestPushLayer(std::move(layer));
+    }
 
-  int Engine::GetWidth() const
-  {
-    return m_Width;
-  }
+    void Engine::PushOverlay(std::unique_ptr<Layer> layer)
+    {
+        Scene* scene = m_SceneManager.GetActiveScene();
+        if (!scene)
+            throw std::runtime_error("PushOverlay called with no active scene");
+        scene->GetLayerStack().RequestPushOverlay(std::move(layer));
+    }
 
-  int Engine::GetHeight() const
-  {
-    return m_Height;
-  }
+    void Engine::PopLayer(const std::string& name)
+    {
+        Scene* scene = m_SceneManager.GetActiveScene();
+        if (!scene)
+            throw std::runtime_error("PopLayer called with no active scene");
+        scene->GetLayerStack().RequestPopLayer(name);
+    }
 
-  void Engine::SetDefaultBackground(bool enabled)
-  {
-    m_UseDefaultBackground = enabled;
-  }
+    void Engine::PopOverlay(const std::string& name)
+    {
+        Scene* scene = m_SceneManager.GetActiveScene();
+        if (!scene)
+            throw std::runtime_error("PopOverlay called with no active scene");
+        scene->GetLayerStack().RequestPopOverlay(name);
+    }
 
-  Scene *Engine::GetActiveScene()
-  {
-    return m_SceneManager.GetActiveScene();
-  }
+    EventBus& Engine::GetEventBus()
+    {
+        Scene* scene = m_SceneManager.GetActiveScene();
+        if (!scene)
+            throw std::runtime_error("GetEventBus called with no active scene");
+        return scene->GetEventBus();
+    }
 
-  void Engine::PushLayer(std::unique_ptr<Layer> layer)
-  {
-    Scene *scene = m_SceneManager.GetActiveScene();
-    if (!scene)
-      throw std::runtime_error("PushLayer called with no active scene");
-    scene->GetLayerStack().RequestPushLayer(std::move(layer));
-  }
+    void Engine::PushScene(std::unique_ptr<Scene> scene)
+    {
+        m_SceneManager.RequestPush(std::move(scene));
+    }
 
-  void Engine::PushOverlay(std::unique_ptr<Layer> layer)
-  {
-    Scene *scene = m_SceneManager.GetActiveScene();
-    if (!scene)
-      throw std::runtime_error("PushOverlay called with no active scene");
-    scene->GetLayerStack().RequestPushOverlay(std::move(layer));
-  }
+    void Engine::PopScene()
+    {
+        m_SceneManager.RequestPop();
+    }
 
-  void Engine::PopLayer(const std::string &name)
-  {
-    Scene *scene = m_SceneManager.GetActiveScene();
-    if (!scene)
-      throw std::runtime_error("PopLayer called with no active scene");
-    scene->GetLayerStack().RequestPopLayer(name);
-  }
+    void Engine::ReplaceScene(std::unique_ptr<Scene> scene)
+    {
+        m_SceneManager.RequestReplace(std::move(scene));
+    }
 
-  void Engine::PopOverlay(const std::string &name)
-  {
-    Scene *scene = m_SceneManager.GetActiveScene();
-    if (!scene)
-      throw std::runtime_error("PopOverlay called with no active scene");
-    scene->GetLayerStack().RequestPopOverlay(name);
-  }
+    TTF_Font* Engine::GetFont()
+    {
+        return m_Font;
+    }
 
-  EventBus &Engine::GetEventBus()
-  {
-    Scene *scene = m_SceneManager.GetActiveScene();
-    if (!scene)
-      throw std::runtime_error("GetEventBus called with no active scene");
-    return scene->GetEventBus();
-  }
+    DrawCommandQueue& Engine::GetDrawQueue()
+    {
+        return m_DrawQueue;
+    }
 
-  void Engine::PushScene(std::unique_ptr<Scene> scene)
-  {
-    m_SceneManager.RequestPush(std::move(scene));
-  }
-
-  void Engine::PopScene()
-  {
-    m_SceneManager.RequestPop();
-  }
-
-  void Engine::ReplaceScene(std::unique_ptr<Scene> scene)
-  {
-    m_SceneManager.RequestReplace(std::move(scene));
-  }
-
-  TTF_Font* Engine::GetFont()
-  {
-    return m_Font;
-  }
-
-  DrawCommandQueue &Engine::GetDrawQueue()
-  {
-    return m_DrawQueue;
-  }
-
-  AssetManager &Engine::GetAssets()
-  {
-    return m_AssetManager;
-  }
-  InputManager &Engine::GetInput()
-  {
-    return m_Input;
-  }
-}
- // namespace Cadmium
+    AssetManager& Engine::GetAssets()
+    {
+        return m_AssetManager;
+    }
+    InputManager& Engine::GetInput()
+    {
+        return m_Input;
+    }
+} // namespace Cadmium

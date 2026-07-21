@@ -19,7 +19,7 @@ namespace Cadmium::Editor
     explicit ViewportPanel(ResizeCallback onResize)
         : m_OnResize(std::move(onResize)) {}
 
-    void Render(const RenderViewport &viewport, const char *title = "Viewport")
+    void Render(RenderViewport &viewport, const char *title = "Viewport")
     {
 #ifdef CADMIUM_IMGUI
       ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0.f, 0.f});
@@ -42,7 +42,9 @@ namespace Cadmium::Editor
 
         if (viewport.IsReady())
         {
+          ImVec2 imgPos = ImGui::GetCursorScreenPos();
           ImGui::Image(viewport.GetImTextureID(), avail);
+          viewport.SetScreenPos(imgPos.x, imgPos.y);
         }
         else
         {

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <memory>
 #include "menu_scene.hpp"
+#include <cadmium/editor/editor_overlay_layer.hpp>
 
 
 int main()
@@ -9,6 +10,7 @@ int main()
   try
   {
     Cadmium::Engine engine("Cadmium - Asteroids", 1280, 720);
+    engine.PushGlobalOverlay(std::make_unique<Cadmium::Editor::EditorOverlayLayer>(engine.GetAssets(), &engine));
     engine.DisableDefaultBackground();
     engine.SetTargetFPS(60);
     engine.PushScene(std::make_unique<Sandbox::MenuScene>());

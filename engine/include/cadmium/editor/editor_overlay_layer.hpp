@@ -4,8 +4,6 @@
 #include <cadmium/core/layer.hpp>
 #include <cadmium/assets/asset_manager.hpp>
 #include <cadmium/assets/asset_types.hpp>
-#include <cadmium/scripting/script_controller.hpp>
-#include <cadmium/editor/script_editor_panel.hpp>
 #include <cadmium/editor/asset_panel.hpp>
 #include <cadmium/editor/viewport_panel.hpp>
 #include <cadmium/editor/render_viewport.hpp>
@@ -26,7 +24,6 @@ public:
     EditorOverlayLayer(AssetManager& assets, IEngineContext* context)
         : Layer("EditorOverlayLayer")
         , m_Assets(assets)
-        , m_ScriptPanel(assets)
         , m_AssetPanel(assets)
         , m_Context(context)
         , m_ViewportPanel([this](int w, int h)
@@ -56,18 +53,18 @@ public:
 #ifdef CADMIUM_IMGUI
         EditorState stateBefore = m_State;
         m_Toolbar.Render(m_State);
-        if (m_State != stateBefore)
-            m_Controller.Pause(m_State == EditorState::Edit);
+        // if (m_State != stateBefore)
+        //     m_Controller.Pause(m_State == EditorState::Edit);
 
-        std::string source;
-        if (m_ScriptPanel.ConsumeRunRequest(source))
-        {
-            bool ok = m_Controller.Reload(source);
-            if (!ok)
-                m_ScriptPanel.SetError("Script error — check console");
-            else
-                m_ScriptPanel.ClearError();
-        }
+        // std::string source;
+        // if (m_ScriptPanel.ConsumeRunRequest(source))
+        // {
+        //     bool ok = m_Controller.Reload(source);
+        //     if (!ok)
+        //         m_ScriptPanel.SetError("Script error — check console");
+        //     else
+        //         m_ScriptPanel.ClearError();
+        // }
 
         SetupDockspace();
 

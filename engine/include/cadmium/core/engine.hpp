@@ -37,6 +37,7 @@ namespace Cadmium
 
     SDL_Renderer *GetRenderer() const;
     void SetTargetFPS(int fps);
+    void PushGlobalOverlay(std::unique_ptr<Layer> layer);
 
   public: // IEngineContext API
     void RequestQuit() override;
@@ -87,6 +88,7 @@ namespace Cadmium
     DrawCommandQueue m_DrawQueue{};
     AssetManager m_AssetManager{};
     Editor::RenderViewport m_Viewport{};
+    LayerStack m_GlobalLayers{};
 
     int m_Width{0};
     int m_Height{0};

@@ -1,10 +1,7 @@
 #pragma once
 
 #include <cadmium/core/scene.hpp>
-#include "game_state.hpp"
-#include "debris_system.hpp"
-#include "menu_events.hpp"
-
+#include <sol/sol.hpp>
 namespace Sandbox
 {
   class MenuScene;
@@ -18,6 +15,8 @@ namespace Sandbox
 
   private:
     Cadmium::SubscriptionToken m_ReturnToken;
+    // TESTING
+    sol::state m_Lua;
   };
 
 } // namespace Sandbox

@@ -20,3 +20,5 @@ PointerAlignment: Left
 SpaceBeforeParens: ControlStatements
 BinPackArguments: false
 BinPackParameters: false
+
+NamespaceIndentation: All

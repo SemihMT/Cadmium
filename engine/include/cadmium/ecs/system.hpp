@@ -5,22 +5,22 @@
 
 namespace Cadmium
 {
-  class World;
-  class System
-  {
+class World;
+class System
+{
   public:
     virtual ~System() = default;
 
-    virtual void OnStart(World&)           {}
+    virtual void OnStart(World&) {}
     virtual void OnUpdate(World&, float dt) = 0;
-    virtual void OnStop(World&)            {}
+    virtual void OnStop(World&) {}
 
     int GetOrder() const { return m_Order; }
 
   private:
     friend class SystemScheduler;
     int m_Order{0};
-  };
+};
 
 } // namespace Cadmium
 

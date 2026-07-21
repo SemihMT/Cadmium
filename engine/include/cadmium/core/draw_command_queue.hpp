@@ -1,8 +1,8 @@
 #pragma once
 #include <SDL3/SDL.h>
+#include <string>
 #include <variant>
 #include <vector>
-#include <string>
 
 namespace Cadmium
 {
@@ -23,11 +23,10 @@ namespace Cadmium
         static Color RGB(float r, float g, float b) { return {r, g, b, 1}; }
         static Color Lerp(Color a, Color b, float t)
         {
-            return {
-                a.r + (b.r - a.r) * t,
-                a.g + (b.g - a.g) * t,
-                a.b + (b.b - a.b) * t,
-                a.a + (b.a - a.a) * t};
+            return {a.r + (b.r - a.r) * t,
+                    a.g + (b.g - a.g) * t,
+                    a.b + (b.b - a.b) * t,
+                    a.a + (b.a - a.a) * t};
         }
     };
 
@@ -86,33 +85,32 @@ namespace Cadmium
         struct ResetCamera
         {
         };
-    }
+    } // namespace DrawCmd
 
-    using DrawCommand = std::variant<
-        DrawCmd::Line,
-        DrawCmd::Rect,
-        DrawCmd::Circle,
-        DrawCmd::Polygon,
-        DrawCmd::Text,
-        DrawCmd::Sprite,
-        DrawCmd::SetCamera,
-        DrawCmd::ResetCamera>;
+    using DrawCommand = std::variant<DrawCmd::Line,
+                                     DrawCmd::Rect,
+                                     DrawCmd::Circle,
+                                     DrawCmd::Polygon,
+                                     DrawCmd::Text,
+                                     DrawCmd::Sprite,
+                                     DrawCmd::SetCamera,
+                                     DrawCmd::ResetCamera>;
 
     // Scripts push commands here during OnRender().
     // ScriptRenderLayer drains and executes them via SDL.
     // Cleared at the end of each drain
     class DrawCommandQueue
     {
-    public:
+      public:
         void Push(DrawCommand cmd) { m_Commands.push_back(std::move(cmd)); }
 
-        const std::vector<DrawCommand> &Commands() const { return m_Commands; }
+        const std::vector<DrawCommand>& Commands() const { return m_Commands; }
 
         void Clear() { m_Commands.clear(); }
 
         bool Empty() const { return m_Commands.empty(); }
 
-    private:
+      private:
         std::vector<DrawCommand> m_Commands;
     };
 
