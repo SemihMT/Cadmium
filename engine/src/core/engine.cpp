@@ -130,6 +130,12 @@ namespace Cadmium
                 (*it)->OnEvent(event);
         }
         m_Input.SnapshotPost();
+        if(m_UseViewport && m_Viewport.IsReady())
+        {
+          float rawX = m_Input.MouseX();
+          float rawY = m_Input.MouseY();
+          m_Input.SetMousePosition(rawX - m_Viewport.GetScreenX(),rawY - m_Viewport.GetScreenY());
+        }
 
         // TODO: expose accumulator to user code as the alpha value between frames for interpolation
         m_Accumulator += dt;

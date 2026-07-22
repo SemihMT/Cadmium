@@ -2,7 +2,6 @@
 #define CADMIUM_INPUT_MANAGER_HPP
 #include <SDL3/SDL.h>
 #include <array>
-#include <cstdint>
 #include <string>
 
 namespace Cadmium
@@ -38,7 +37,7 @@ public:
     bool IsMouseJustReleased(int button) const;
 
     //  Mouse position and movement
-
+    void SetMousePosition(float x, float y) { m_MouseX = x; m_MouseY = y; } // For remapping in viewport
     float MouseX() const { return m_MouseX; }
     float MouseY() const { return m_MouseY; }
 
