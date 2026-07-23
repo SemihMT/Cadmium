@@ -2,9 +2,10 @@
 #define CADMIUM_EDITOR_IMGUI_ASSET_PANEL_HPP
 
 #include <cadmium/assets/asset_manager.hpp>
-#include <imgui.h>
-#include <string>
+#include <cadmium/core/cadmium_theme.hpp>
 #include <functional>
+#include <imgui.h>
+
 
 namespace Cadmium::Editor
 {
@@ -313,16 +314,26 @@ private:
         const char* label;
         switch (type)
         {
-            case AssetType::Texture:
-                bgColor = IM_COL32(20,  100,  200,  200); label = "TEX"; break;
-            case AssetType::Script:
-                bgColor = IM_COL32(40,  80,  40,  200); label = "LUA"; break;
-            case AssetType::Font:
-                bgColor = IM_COL32(60,  60,  100, 200); label = "FONT"; break;
-            case AssetType::Sound:
-                bgColor = IM_COL32(80,  50,  20,  200); label = "SND"; break;
-            default:
-                bgColor = IM_COL32(50,  50,  50,  200); label = "???"; break;
+        case AssetType::Texture:
+            bgColor = Theme::BadgeColor(Theme::k_Ultramarine);
+            label = "TEX";
+            break;
+        case AssetType::Script:
+            bgColor = Theme::BadgeColor(Theme::k_Viridian);
+            label = "LUA";
+            break;
+        case AssetType::Font:
+            bgColor = Theme::BadgeColor(Theme::k_ManganeseViolet);
+            label = "FONT";
+            break;
+        case AssetType::Sound:
+            bgColor = Theme::BadgeColor(Theme::k_RawSienna);
+            label = "SND";
+            break;
+        default:
+            bgColor = Theme::BadgeColor(Theme::k_Unknown);
+            label = "???";
+            break;
         }
 
         dl->AddRectFilled(pos, end, bgColor, 6.f);

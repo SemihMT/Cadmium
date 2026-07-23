@@ -7,8 +7,6 @@
 #include <memory>
 #include <queue>
 #include <stdexcept>
-#include <string>
-#include <typeindex>
 #include <unordered_map>
 #include <vector>
 
@@ -36,9 +34,10 @@ class Registry
             if (index > EntityBits::k_MaxIndex)
                 throw std::runtime_error("Entity limit reached");
             m_Generations.push_back(0);
+            m_Alive.push_back(false);
             generation = 0;
         }
-
+        m_Alive[index] = true;
         return MakeEntity(index, generation);
     }
 
@@ -53,6 +52,7 @@ class Registry
         for (auto& [id, set] : m_Sets)
             set->Remove(index);
 
+        m_Alive[index] = false;
         // Increment generation to invalidate existing IDs
         uint32_t& gen = m_Generations[index];
         if (gen < EntityBits::k_MaxGeneration)
@@ -72,6 +72,16 @@ class Registry
             return false;
 
         return EntityGeneration(entity) == m_Generations[index];
+    }
+
+    std::vector<Entity> AllEntities() const
+    {
+        std::vector<Entity> result;
+        result.reserve(EntityCount());
+        for (uint32_t i = 0; i < m_Generations.size(); ++i)
+            if (m_Alive[i])
+                result.push_back(MakeEntity(i, m_Generations[i]));
+        return result;
     }
 
     // Component management
@@ -187,6 +197,7 @@ class Registry
 
     std::unordered_map<ComponentID, std::unique_ptr<ISparseSet>> m_Sets;
     std::vector<uint32_t> m_Generations;
+    std::vector<uint8_t> m_Alive; // was vector<bool>, changed due to it not being an actual vector of bools
     std::queue<uint32_t> m_FreeList;
 };
 

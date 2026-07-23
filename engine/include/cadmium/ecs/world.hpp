@@ -3,6 +3,7 @@
 
 #include <cadmium/core/logger.hpp>
 #include <cadmium/ecs/registry.hpp>
+#include <cadmium/ecs/components.hpp>
 #include <cadmium/ecs/system_scheduler.hpp>
 
 namespace Cadmium
@@ -28,7 +29,11 @@ namespace Cadmium
 
     // Entity API - forwarded from Registry
     Entity CreateEntity() { return m_Registry.CreateEntity(); }
-    void DestroyEntity(Entity e) { m_Registry.DestroyEntity(e); }
+    void DestroyEntity(Entity e)
+    {
+        OrphanChildrenOf(e);
+        m_Registry.DestroyEntity(e);
+    }
     bool IsValid(Entity e) const { return m_Registry.IsValid(e); }
     size_t EntityCount() const { return m_Registry.EntityCount(); }
 
@@ -80,6 +85,50 @@ namespace Cadmium
 
     template <typename T>
     void UnregisterSystem() { m_Scheduler.UnregisterSystem<T>(*this); }
+
+    // ECS Scenegraph methods
+    std::vector<Entity> AllEntities() { return m_Registry.AllEntities(); }
+
+    glm::mat4 GetWorldMatrix(Entity entity, int depth)
+    {
+        glm::mat4 local = GetComponent<Transform>(entity).GetMatrix();
+
+        if (depth >= 64) // cycle guard
+            return local;
+
+        if (auto* parent = TryGetComponent<Parent>(entity))
+            if (IsValid(parent->entity) && parent->entity != entity)
+                return GetWorldMatrix(parent->entity, depth + 1) * local;
+
+        return local;
+    }
+
+    bool SetParent(Entity child, Entity parent)
+    {
+        if (child == parent) return false;
+
+        Entity walk = parent;
+        while (IsValid(walk))
+        {
+            if (walk == child) return false;
+            auto* p = TryGetComponent<Parent>(walk);
+            if (!p) break;
+            walk = p->entity;
+        }
+
+        AddComponent<Parent>(child, Parent{parent});
+        return true;
+    }
+
+    void ClearParent(Entity child) { RemoveComponent<Parent>(child); }
+
+    void OrphanChildrenOf(Entity destroyed)
+    {
+        for (Entity e : AllEntities())
+            if (auto* p = TryGetComponent<Parent>(e))
+                if (p->entity == destroyed)
+                    RemoveComponent<Parent>(e);
+    }
 
     // Direct registry access for systems that need it (scripting layer)
     // C++ systems should use the world's api

@@ -9,7 +9,9 @@ add_library(cadmium-engine STATIC
     src/core/scene.cpp
     src/core/input_manager.cpp
     src/core/logger.cpp
+    src/core/cadmium_theme.cpp
     src/assets/asset_manager.cpp
+    src/editor/register_builtin_components.cpp
 )
 
 target_include_directories(cadmium-engine
