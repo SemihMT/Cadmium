@@ -17,6 +17,13 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SDL_ttf)
 
+foreach(vendored_target harfbuzz freetype)
+    if(TARGET ${vendored_target})
+        target_compile_options(${vendored_target} PRIVATE -w)
+        set_target_properties(${vendored_target} PROPERTIES COMPILE_WARNING_AS_ERROR OFF)
+    endif()
+endforeach()
+
 FetchContent_Declare(
     SDL_image
     GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
