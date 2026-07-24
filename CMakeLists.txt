@@ -6,6 +6,12 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(EMSCRIPTEN)
+message("[Cadmium] - Emscripten build: relaxing HarfBuzz warning->error flags")
+# Prevent unused-template warnings from being promoted to errors by em++/clang
+add_compile_options( -Wno-error=unused-template -Wno-unused-template -Wno-error=unused-function -Wno-unused-function )
+endif()
+
 option(CADMIUM_IMGUI "Enable ImGui support" ON)
 
 include(cmake/helpers.cmake)
