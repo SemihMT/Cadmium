@@ -15,11 +15,14 @@ namespace Cadmium
   class Scene
   {
   public:
-    explicit Scene(std::string name)
-        : m_Name{std::move(name)} {}
+    explicit Scene(std::string name) : m_Name{std::move(name)} { m_World.SetOwningScene(this); }
 
     virtual ~Scene() = default;
-
+    void Enter()
+    {
+        m_ScriptHost.Configure(m_Context->GetInput());
+        OnEnter();
+    }
     void Destroy();
 
     virtual void OnEnter() {}
@@ -80,7 +83,7 @@ namespace Cadmium
     EventBus m_EventBus;
     LayerStack m_LayerStack;
     IEngineContext *m_Context{nullptr};
-    std::unique_ptr<ScriptHost> m_ScriptHost;
+    ScriptHost m_ScriptHost;
     World m_World;
   };
 

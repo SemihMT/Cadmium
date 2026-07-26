@@ -19,11 +19,12 @@ namespace Sandbox
 
     sol::table env = GetScriptHost().LoadScript("assets/scripts/test_script.lua");
     if (!env.valid())
-        return; // logged already, no crash, entity just has no script
+        return;
 
     Cadmium::Entity e = CreateEntity();
+    GetWorld().AddComponent<Cadmium::Transform>(e, {});
     Cadmium::Script script{};
-    script.self       = GetScriptHost().GetState().create_table();
+    script.self       = sol::make_object(GetScriptHost().GetState(),Cadmium::EntityHandle{&GetWorld(),e});
     script.onStart    = env["OnStart"];
     script.onUpdate   = env["OnUpdate"];
     script.onDestroy  = env["OnDestroy"];

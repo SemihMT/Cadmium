@@ -55,7 +55,7 @@ namespace Cadmium
     scene->SetContext(context);
     m_Stack.push_back(std::move(scene));
     m_Stack.back()->GetWorld().Start();
-    m_Stack.back()->OnEnter();
+    m_Stack.back()->Enter();
   }
 
   void SceneManager::ApplyPop(IEngineContext *context)
@@ -68,7 +68,7 @@ namespace Cadmium
     m_Stack.pop_back();
 
     if (!m_Stack.empty())
-      m_Stack.back()->OnEnter();
+      m_Stack.back()->Enter();
   }
 
   void SceneManager::ApplyReplace(std::unique_ptr<Scene> scene,
@@ -84,7 +84,7 @@ namespace Cadmium
     scene->SetContext(context);
     m_Stack.push_back(std::move(scene));
     m_Stack.back()->GetWorld().Start();
-    m_Stack.back()->OnEnter();
+    m_Stack.back()->Enter();
   }
 
 } // namespace Cadmium

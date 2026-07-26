@@ -3,11 +3,9 @@ function OnStart(self)
     print("OnStart called!")
 end
 
-counter = 0
-function OnUpdate(self, dt)
-    -- runs every frame
-    counter = counter + 1
-    print("OnUpdate called for the", counter, "th time!")
+function OnUpdate(self,dt)
+    local t = self:GetTransform()
+    t.x = t.x + 10 * Time.dt
 end
 
 function OnDestroy(self)

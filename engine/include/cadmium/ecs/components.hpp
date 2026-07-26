@@ -15,6 +15,7 @@
 
 namespace Cadmium
 {
+    class World;
     struct Parent
     {
         Entity entity{k_NullEntity};
@@ -120,6 +121,12 @@ namespace Cadmium
     struct Tag
     {
         std::string name;
+    };
+
+    struct EntityHandle
+    {
+        World* world;
+        Entity entity;
     };
 
     struct Script

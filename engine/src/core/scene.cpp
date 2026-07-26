@@ -7,8 +7,7 @@ namespace Cadmium
   void Scene::Destroy()
   {
       OnDestroy();
-      if (m_ScriptHost)
-          m_ScriptHost->Shutdown(m_World);
+      m_ScriptHost.Shutdown(m_World);
   }
   void Scene::SetContext(IEngineContext* context)
   {
@@ -22,9 +21,7 @@ namespace Cadmium
   }
   ScriptHost& Scene::GetScriptHost()
   {
-      if (!m_ScriptHost)
-          m_ScriptHost = std::make_unique<ScriptHost>();
-      return *m_ScriptHost;
+      return m_ScriptHost;
   }
 
   void Scene::Quit()

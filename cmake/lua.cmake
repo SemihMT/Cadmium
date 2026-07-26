@@ -45,8 +45,9 @@ if(EMSCRIPTEN)
     target_compile_definitions(lua_static PRIVATE LUA_USE_POSIX=0)
 endif()
 
-# Position independent code is good practice
-set_target_properties(lua_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# if(NOT MSVC)
+#     set_target_properties(lua_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# endif()
 
 # Alias to the conventional namespaced target name
 add_library(lua::lua ALIAS lua_static)

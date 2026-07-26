@@ -8,33 +8,22 @@
 
 namespace Cadmium
 {
+  class Scene;
+  class ScriptHost;
   class World
   {
   public:
     // Lifecycle
-    void Start()
-    {
-      m_Scheduler.Start(*this);
-    }
+    void Start();
 
-    void Update(float dt)
-    {
-      m_Scheduler.Update(*this, dt);
-    }
+    void Update(float dt);
 
-    void Stop()
-    {
-      m_Scheduler.Stop(*this);
-    }
+    void Stop();
 
+    void SetOwningScene(Scene* scene);
     // Entity API - forwarded from Registry
-    Entity CreateEntity() { return m_Registry.CreateEntity(); }
-    void DestroyEntity(Entity e)
-    {
-        OrphanChildrenOf(e);
-        m_Scheduler.NotifyEntityDestroyed(*this,e);
-        m_Registry.DestroyEntity(e);
-    }
+    Entity CreateEntity();
+    void DestroyEntity(Entity e);
     bool IsValid(Entity e) const { return m_Registry.IsValid(e); }
     size_t EntityCount() const { return m_Registry.EntityCount(); }
 
@@ -88,55 +77,26 @@ namespace Cadmium
     void UnregisterSystem() { m_Scheduler.UnregisterSystem<T>(*this); }
 
     // ECS Scenegraph methods
-    std::vector<Entity> AllEntities() { return m_Registry.AllEntities(); }
+    std::vector<Entity> AllEntities();
 
-    glm::mat4 GetWorldMatrix(Entity entity, int depth)
-    {
-        glm::mat4 local = GetComponent<Transform>(entity).GetMatrix();
+    glm::mat4 GetWorldMatrix(Entity entity, int depth);
 
-        if (depth >= 64) // cycle guard
-            return local;
-
-        if (auto* parent = TryGetComponent<Parent>(entity))
-            if (IsValid(parent->entity) && parent->entity != entity)
-                return GetWorldMatrix(parent->entity, depth + 1) * local;
-
-        return local;
-    }
-
-    bool SetParent(Entity child, Entity parent)
-    {
-        if (child == parent) return false;
-
-        Entity walk = parent;
-        while (IsValid(walk))
-        {
-            if (walk == child) return false;
-            auto* p = TryGetComponent<Parent>(walk);
-            if (!p) break;
-            walk = p->entity;
-        }
-
-        AddComponent<Parent>(child, Parent{parent});
-        return true;
-    }
+    bool SetParent(Entity child, Entity parent);
 
     void ClearParent(Entity child) { RemoveComponent<Parent>(child); }
 
-    void OrphanChildrenOf(Entity destroyed)
-    {
-        for (Entity e : AllEntities())
-            if (auto* p = TryGetComponent<Parent>(e))
-                if (p->entity == destroyed)
-                    RemoveComponent<Parent>(e);
-    }
+    void OrphanChildrenOf(Entity destroyed);
+
+    // Scripting
+    ScriptHost& GetScriptHost();
 
     // Direct registry access for systems that need it (scripting layer)
     // C++ systems should use the world's api
-    Registry &GetRegistry() { return m_Registry; }
-    const Registry &GetRegistry() const { return m_Registry; }
+    Registry& GetRegistry();
+    const Registry& GetRegistry() const;
 
   private:
+    Scene* m_OwningScene {nullptr};
     Registry m_Registry;
     SystemScheduler m_Scheduler;
   };

@@ -5,6 +5,7 @@
 #include <cadmium/ecs/components.hpp>
 #include <cadmium/ecs/system.hpp>
 #include <cadmium/ecs/world.hpp>
+#include <cadmium/scripting/script_host.hpp>
 #include <sol/error.hpp>
 #include <sol/forward.hpp>
 #include <sol/protected_function_result.hpp>
@@ -17,6 +18,7 @@ namespace Cadmium
       public:
         void OnUpdate(World& world, float dt) override
         {
+            world.GetScriptHost().UpdateTime(dt);
             for (auto entity : world.QueryEntities<Script>())
             {
                 auto& script = world.GetComponent<Script>(entity);
