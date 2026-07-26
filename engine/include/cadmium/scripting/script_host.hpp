@@ -54,7 +54,7 @@ namespace Cadmium
         // still alive.
         void Shutdown(World& world)
         {
-            for (auto entity : world.QueryEntities<Script>();)
+            for (auto entity : world.QueryEntities<Script>())
                 world.DestroyEntity(entity);
         }
 
