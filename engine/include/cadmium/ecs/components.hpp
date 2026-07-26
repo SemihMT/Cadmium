@@ -2,6 +2,7 @@
 #define CADMIUM_COMPONENTS_HPP
 
 #include "cadmium/ecs/entity.hpp"
+#include <sol/forward.hpp>
 #include <string>
 
 #include <glm/glm.hpp>
@@ -124,7 +125,10 @@ namespace Cadmium
     struct Script
     {
         sol::table self;
+        sol::function onStart;
         sol::function onUpdate;
+        sol::function onDestroy;
+        bool started{false};
     };
 
 } // namespace Cadmium

@@ -17,14 +17,17 @@ namespace Sandbox
   {
     SetDefaultBackground(false);
 
-    m_Lua.open_libraries(sol::lib::base, sol::lib::math, sol::lib::string);
-    m_Lua.script_file("assets/scripts/test_script.lua");
+    sol::table env = GetScriptHost().LoadScript("assets/scripts/test_script.lua");
+    if (!env.valid())
+        return; // logged already, no crash, entity just has no script
 
-    auto entity = GetWorld().CreateEntity();
-    Cadmium::Script script;
-    script.self = m_Lua.create_table();
-    script.onUpdate = m_Lua["OnUpdate"];
-    GetWorld().AddComponent<Cadmium::Script>(entity,script);
+    Cadmium::Entity e = CreateEntity();
+    Cadmium::Script script{};
+    script.self       = GetScriptHost().GetState().create_table();
+    script.onStart    = env["OnStart"];
+    script.onUpdate   = env["OnUpdate"];
+    script.onDestroy  = env["OnDestroy"];
+    GetWorld().AddComponent<Cadmium::Script>(e, script);
 
     RegisterSystem<Cadmium::ScriptSystem>(0);
     RegisterSystem<DebrisSystem>(1);

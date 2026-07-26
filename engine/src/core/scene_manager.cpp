@@ -64,7 +64,7 @@ namespace Cadmium
       return;
 
     m_Stack.back()->GetWorld().Stop();
-    m_Stack.back()->OnDestroy();
+    m_Stack.back()->Destroy();
     m_Stack.pop_back();
 
     if (!m_Stack.empty())
@@ -77,7 +77,7 @@ namespace Cadmium
     if (!m_Stack.empty())
     {
       m_Stack.back()->GetWorld().Stop();
-      m_Stack.back()->OnDestroy();
+      m_Stack.back()->Destroy();
       m_Stack.pop_back();
     }
 

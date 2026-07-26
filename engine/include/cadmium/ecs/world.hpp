@@ -32,6 +32,7 @@ namespace Cadmium
     void DestroyEntity(Entity e)
     {
         OrphanChildrenOf(e);
+        m_Scheduler.NotifyEntityDestroyed(*this,e);
         m_Registry.DestroyEntity(e);
     }
     bool IsValid(Entity e) const { return m_Registry.IsValid(e); }

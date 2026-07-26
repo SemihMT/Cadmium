@@ -14,7 +14,7 @@ class System
     virtual void OnStart(World&) {}
     virtual void OnUpdate(World&, float dt) = 0;
     virtual void OnStop(World&) {}
-
+    virtual void OnEntityDestroyed(World&, Entity) {}
     int GetOrder() const { return m_Order; }
 
   private:

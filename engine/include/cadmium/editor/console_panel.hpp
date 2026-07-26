@@ -27,7 +27,7 @@ public:
         m_SinkId = GetLogger().AddSink([this](const LogRecord& record)
         {
             PushRecord(record);
-        });
+        }, true);
     }
 
     void Detach()

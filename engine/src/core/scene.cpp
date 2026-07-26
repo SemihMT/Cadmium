@@ -4,7 +4,13 @@
 namespace Cadmium
 {
   // Engine-facing interface
-  void Scene::SetContext(IEngineContext *context)
+  void Scene::Destroy()
+  {
+      OnDestroy();
+      if (m_ScriptHost)
+          m_ScriptHost->Shutdown(m_World);
+  }
+  void Scene::SetContext(IEngineContext* context)
   {
     m_Context = context;
   }
@@ -13,6 +19,12 @@ namespace Cadmium
   EventBus &Scene::GetEventBus()
   {
     return m_EventBus;
+  }
+  ScriptHost& Scene::GetScriptHost()
+  {
+      if (!m_ScriptHost)
+          m_ScriptHost = std::make_unique<ScriptHost>();
+      return *m_ScriptHost;
   }
 
   void Scene::Quit()
@@ -26,6 +38,10 @@ namespace Cadmium
   int Scene::GetHeight() const
   {
     return m_Context->GetHeight();
+  }
+  void Scene::SetDefaultBackground(bool enabled)
+  {
+      m_Context->SetDefaultBackground(enabled);
   }
 
   void Scene::PushScene(std::unique_ptr<Scene> scene)

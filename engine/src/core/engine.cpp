@@ -41,7 +41,7 @@ namespace Cadmium
 
         m_Font = TTF_OpenFont(AssetPath("assets/fonts/JetBrainsMono-Regular.ttf").c_str(), 96);
         if (!m_Font)
-            SDL_Log("Failed to load font: %s", SDL_GetError());
+            Log::Error("[SDL_TTF]", "Failed to load font: {}", SDL_GetError());
 
         m_Frequency = SDL_GetPerformanceFrequency();
         m_LastCounter = SDL_GetPerformanceCounter();

@@ -2,6 +2,7 @@
 #define CADMIUM_EDITOR_RENDER_VIEWPORT_HPP
 
 #include <SDL3/SDL.h>
+#include <cadmium/core/logger.hpp>
 
 #include <memory>
 
@@ -43,7 +44,7 @@ namespace Cadmium::Editor
                 return false;
             if (!m_Renderer)
             {
-                SDL_Log("[RenderViewport] Resize called without a renderer.");
+                Log::Warn("RenderViewport","Resize called without a renderer.");
                 return false;
             }
 
@@ -57,7 +58,7 @@ namespace Cadmium::Editor
 
             if (!newTex)
             {
-                SDL_Log("[RenderViewport] Failed to create render target: %s", SDL_GetError());
+                Log::Error("[RenderViewport]", "Failed to create render target: {}", SDL_GetError());
                 m_Width = 0;
                 m_Height = 0;
                 return false;
@@ -77,7 +78,7 @@ namespace Cadmium::Editor
                 return false;
             if (!SDL_SetRenderTarget(m_Renderer, m_Texture.get()))
             {
-                SDL_Log("[RenderViewport] Bind failed: %s", SDL_GetError());
+                Log::Error("[RenderViewport]"," Bind failed: {}", SDL_GetError());
                 return false;
             }
             return true;
@@ -89,7 +90,7 @@ namespace Cadmium::Editor
             SDL_assert(m_Renderer);
             if (!SDL_SetRenderTarget(m_Renderer, nullptr))
             {
-                SDL_Log("[RenderViewport] Unbind failed: %s", SDL_GetError());
+                Log::Error("[RenderViewport]","Unbind failed: {}", SDL_GetError());
                 return false;
             }
             return true;

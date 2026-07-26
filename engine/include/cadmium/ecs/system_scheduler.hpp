@@ -94,6 +94,12 @@ namespace Cadmium
         (*it)->OnStop(world);
     }
 
+    void NotifyEntityDestroyed(World& world, Entity entity)
+    {
+      for(auto& system : m_Systems)
+        system->OnEntityDestroyed(world, entity);
+    }
+
   private:
     std::vector<std::unique_ptr<System>>        m_Systems;
     std::unordered_map<std::type_index, System*> m_Index;

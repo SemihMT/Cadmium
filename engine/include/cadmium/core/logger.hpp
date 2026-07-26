@@ -6,6 +6,7 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <deque>
 
 namespace Cadmium
 {
@@ -76,9 +77,14 @@ public:
     // Returns a sink ID that can be used to remove the sink later.
     // Thread-safe.
 
-    uint32_t AddSink(LogSink sink)
+    uint32_t AddSink(LogSink sink, bool replayHistory = false)
     {
         std::lock_guard lock(m_Mutex);
+
+        if (replayHistory)
+            for (const auto& record : m_History)
+                sink(record);
+
         uint32_t id = m_NextSinkId++;
         m_Sinks.push_back({ id, std::move(sink) });
         return id;
@@ -109,6 +115,11 @@ public:
         LogRecord record{ level, category, message };
 
         std::lock_guard lock(m_Mutex);
+
+        if (m_History.size() >= k_MaxHistory)
+            m_History.pop_front();
+        m_History.push_back(record);
+
         for (auto& s : m_Sinks)
             s.sink(record);
     }
@@ -132,7 +143,10 @@ private:
         LogSink  sink;
     };
 
+    static constexpr size_t k_MaxHistory = 500;
+
     std::vector<RegisteredSink> m_Sinks;
+    std::deque<LogRecord>       m_History;
     std::mutex                  m_Mutex;
     LogLevel                    m_Level{LogLevel::Trace};
     uint32_t                    m_NextSinkId{1};

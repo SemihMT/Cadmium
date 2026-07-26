@@ -1,4 +1,5 @@
 #include <cadmium/assets/asset_manager.hpp>
+#include <cadmium/core/logger.hpp>
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
@@ -52,7 +53,7 @@ TextureHandle AssetManager::LoadTexture(const std::string& path)
 
     if (!texture)
     {
-        SDL_Log("[AssetManager] Failed to load texture '%s': %s",
+        Log::Error("[AssetManager]", "Failed to load texture '{}': {}",
                 path.c_str(), SDL_GetError());
         return k_InvalidHandle;
     }
@@ -67,7 +68,7 @@ TextureHandle AssetManager::LoadTexture(const std::string& path)
 
     UpdateEntry(path, AssetType::Texture, handle, (int)w, (int)h);
 
-    SDL_Log("[AssetManager] Loaded texture '%s' (%dx%d) → handle %u",
+    Log::Info("[AssetManager]", "Loaded texture '{}' ({}x{}) → handle {}",
             path.c_str(), (int)w, (int)h, handle);
 
     return handle;
@@ -86,7 +87,7 @@ FontHandle AssetManager::LoadFont(const std::string& path, int size)
 
     if (!font)
     {
-        SDL_Log("[AssetManager] Failed to load font '%s' at size %d: %s",
+        Log::Error("[AssetManager]", "Failed to load font '{}' at size {}: {}",
                 path.c_str(), size, SDL_GetError());
         return k_InvalidHandle;
     }
@@ -97,7 +98,7 @@ FontHandle AssetManager::LoadFont(const std::string& path, int size)
 
     UpdateEntry(path, AssetType::Font, handle, 0, 0, size);
 
-    SDL_Log("[AssetManager] Loaded font '%s' size %d → handle %u",
+    Log::Info("[AssetManager]", "Loaded font '{}' size {} → handle {}",
             path.c_str(), size, handle);
 
     return handle;
@@ -115,7 +116,7 @@ ScriptHandle AssetManager::LoadScript(const std::string &path)
     std::ifstream file(fullPath);
     if (!file.is_open())
     {
-        SDL_Log("[AssetManager] Failed to open script '%s'", path.c_str());
+        Log::Error("[AssetManager]", "Failed to open script '{}'", path.c_str());
         return k_InvalidHandle;
     }
 
@@ -129,7 +130,7 @@ ScriptHandle AssetManager::LoadScript(const std::string &path)
 
     UpdateEntry(path, AssetType::Script, handle);
 
-    SDL_Log("[AssetManager] Loaded script '%s' → handle %u", path.c_str(), handle);
+    Log::Info("[AssetManager]", "Loaded script '{}' → handle {}", path.c_str(), handle);
 
     return handle;
 }
@@ -276,7 +277,7 @@ void AssetManager::ScanProjectFiles()
     fs::path root(m_ProjectRoot);
     if (!fs::exists(root) || !fs::is_directory(root))
     {
-        SDL_Log("[AssetManager] Project root does not exist: %s",
+        Log::Error("[AssetManager]", "Project root does not exist: {}",
                 m_ProjectRoot.c_str());
         return;
     }
@@ -321,7 +322,7 @@ void AssetManager::ScanProjectFiles()
             return a.path < b.path;
         });
 
-    SDL_Log("[AssetManager] Scanned project: found %zu asset files",
+    Log::Info("[AssetManager]", "Scanned project: found {} asset files",
             m_Entries.size());
 }
 

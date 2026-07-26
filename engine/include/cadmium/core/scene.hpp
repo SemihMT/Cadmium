@@ -4,6 +4,7 @@
 #include <cadmium/core/layer_stack.hpp>
 #include <cadmium/core/event_bus.hpp>
 #include <cadmium/ecs/world.hpp>
+#include <cadmium/scripting/script_host.hpp>
 #include <string>
 #include <memory>
 #include <functional>
@@ -19,6 +20,8 @@ namespace Cadmium
 
     virtual ~Scene() = default;
 
+    void Destroy();
+
     virtual void OnEnter() {}
     virtual void OnExit() {}
     virtual void OnDestroy() {}
@@ -31,15 +34,13 @@ namespace Cadmium
     IEngineContext *GetContext() const;
     LayerStack &GetLayerStack();
     EventBus &GetEventBus();
+    ScriptHost& GetScriptHost();
 
   protected:
     void Quit();
     int GetWidth() const;
     int GetHeight() const;
-    void SetDefaultBackground(bool enabled)
-    {
-      m_Context->SetDefaultBackground(enabled);
-    }
+    void SetDefaultBackground(bool enabled);
     void PushScene(std::unique_ptr<Scene> scene);
     void PopScene();
     void ReplaceScene(std::unique_ptr<Scene> scene);
@@ -79,6 +80,7 @@ namespace Cadmium
     EventBus m_EventBus;
     LayerStack m_LayerStack;
     IEngineContext *m_Context{nullptr};
+    std::unique_ptr<ScriptHost> m_ScriptHost;
     World m_World;
   };
 
