@@ -37,10 +37,32 @@ namespace Cadmium::Editor::Detail
 
     inspector.Register<Script>("Script", [](Script& s)
     {
-      if (!s.self.valid())
-        ImGui::TextDisabled("(no data)");
-      else
-        ImGui::TextDisabled("Lua entity (table contents not shown yet)");
+      for (const auto& instance : s.instances)
+      {
+          if (!instance.env.valid())
+          {
+              ImGui::TextDisabled("(no data)");
+              continue;
+          }
+
+          if (ImGui::TreeNode(instance.name.c_str()))
+          {
+              for (auto& [key, value] : instance.env)
+              {
+                  std::string keyStr = key.as<std::string>();
+                  if (keyStr == "self")
+                      continue;
+
+                  if (value.get_type() == sol::type::number)
+                      ImGui::Text("%s: %.2f", keyStr.c_str(), value.as<double>());
+                  else if (value.get_type() == sol::type::string)
+                      ImGui::Text("%s: %s", keyStr.c_str(), value.as<std::string>().c_str());
+                  else if (value.get_type() == sol::type::boolean)
+                      ImGui::Text("%s: %s", keyStr.c_str(), value.as<bool>() ? "true" : "false");
+              }
+              ImGui::TreePop();
+          }
+      }
     });
   }
 }

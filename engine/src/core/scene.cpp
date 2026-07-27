@@ -1,3 +1,4 @@
+#include "cadmium/ecs/components.hpp"
 #include <cadmium/core/scene.hpp>
 #include <SDL3_ttf/SDL_ttf.h>
 
@@ -90,6 +91,39 @@ namespace Cadmium
   InputManager &Scene::GetInput()
   {
     return m_Context->GetInput();
+  }
+  Entity Scene::CreateEntity()
+  {
+      auto entity = m_World.CreateEntity();
+      m_World.AddComponent<Transform>(entity, {});
+      return entity;
+  }
+  Entity Scene::CreateScriptedEntity(const std::string& scriptPath)
+  {
+      Entity e = CreateEntity();
+      AttachScript(e, scriptPath);
+      return e;
+  }
+
+  bool Scene::AttachScript(Entity e, const std::string& scriptPath)
+  {
+      auto loaded = GetScriptHost().LoadScript(scriptPath);
+      if (!loaded.valid)
+          return false;
+
+      ScriptInstance instance{};
+      instance.env = loaded.env;
+      instance.name = loaded.name;
+      instance.onStart = loaded.onStart;
+      instance.onUpdate = loaded.onUpdate;
+      instance.onDestroy = loaded.onDestroy;
+      instance.env["self"] = EntityHandle{&GetWorld(), e};
+
+      if (!GetWorld().HasComponent<Script>(e))
+          GetWorld().AddComponent<Script>(e, Script{});
+
+      GetWorld().GetComponent<Script>(e).instances.push_back(std::move(instance));
+      return true;
   }
 }
 // namespace Cadmium

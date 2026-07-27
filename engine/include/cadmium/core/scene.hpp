@@ -1,6 +1,7 @@
 #ifndef CADMIUM_SCENE_HPP
 #define CADMIUM_SCENE_HPP
 
+#include "cadmium/ecs/components.hpp"
 #include <cadmium/core/layer_stack.hpp>
 #include <cadmium/core/event_bus.hpp>
 #include <cadmium/ecs/world.hpp>
@@ -20,7 +21,7 @@ namespace Cadmium
     virtual ~Scene() = default;
     void Enter()
     {
-        m_ScriptHost.Configure(m_Context->GetInput());
+        m_ScriptHost.Configure(m_Context->GetInput(), m_World);
         OnEnter();
     }
     void Destroy();
@@ -69,8 +70,11 @@ namespace Cadmium
       return m_EventBus.Subscribe<T>(std::move(handler));
     }
 
-    Entity CreateEntity() { return m_World.CreateEntity(); }
+    Entity CreateEntity();
+    Entity CreateScriptedEntity(const std::string& scriptPath);
     void DestroyEntity(Entity e) { m_World.DestroyEntity(e); }
+
+    bool AttachScript(Entity e, const std::string& scriptPath);
 
     template <typename T, typename... Args>
     T &RegisterSystem(int order, Args &&...args)

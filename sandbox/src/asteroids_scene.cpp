@@ -17,18 +17,13 @@ namespace Sandbox
   {
     SetDefaultBackground(false);
 
-    sol::table env = GetScriptHost().LoadScript("assets/scripts/test_script.lua");
-    if (!env.valid())
-        return;
+    Cadmium::Entity player = CreateEntity();
+    GetWorld().AddComponent<Cadmium::Tag>(player, {"Player"});
+    AttachScript(player, "assets/scripts/test_script.lua");
 
-    Cadmium::Entity e = CreateEntity();
-    GetWorld().AddComponent<Cadmium::Transform>(e, {});
-    Cadmium::Script script{};
-    script.self       = sol::make_object(GetScriptHost().GetState(),Cadmium::EntityHandle{&GetWorld(),e});
-    script.onStart    = env["OnStart"];
-    script.onUpdate   = env["OnUpdate"];
-    script.onDestroy  = env["OnDestroy"];
-    GetWorld().AddComponent<Cadmium::Script>(e, script);
+    Cadmium::Entity enemy = CreateEntity();
+    AttachScript(enemy, "assets/scripts/enemy_ai.lua");
+    AttachScript(enemy, "assets/scripts/health.lua");
 
     RegisterSystem<Cadmium::ScriptSystem>(0);
     RegisterSystem<DebrisSystem>(1);

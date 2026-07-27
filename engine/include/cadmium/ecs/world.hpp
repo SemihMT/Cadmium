@@ -1,6 +1,7 @@
 #ifndef CADMIUM_WORLD_HPP
 #define CADMIUM_WORLD_HPP
 
+#include "cadmium/ecs/entity.hpp"
 #include <cadmium/core/logger.hpp>
 #include <cadmium/ecs/registry.hpp>
 #include <cadmium/ecs/components.hpp>
@@ -24,8 +25,9 @@ namespace Cadmium
     // Entity API - forwarded from Registry
     Entity CreateEntity();
     void DestroyEntity(Entity e);
-    bool IsValid(Entity e) const { return m_Registry.IsValid(e); }
-    size_t EntityCount() const { return m_Registry.EntityCount(); }
+    void FlushPendingDestroys();
+    bool IsValid(Entity e) const;
+    size_t EntityCount() const;
 
     template <typename T>
     void AddComponent(Entity e, T component)
@@ -96,6 +98,7 @@ namespace Cadmium
     const Registry& GetRegistry() const;
 
   private:
+    std::vector<Entity> m_PendingDestroy;
     Scene* m_OwningScene {nullptr};
     Registry m_Registry;
     SystemScheduler m_Scheduler;

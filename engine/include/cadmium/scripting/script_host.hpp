@@ -20,7 +20,11 @@ namespace Cadmium
             RegisterCoreTypes();
         }
 
-        void Configure(InputManager& input) { RegisterInputFunctions(input); }
+        void Configure(InputManager& input, World& world)
+        {
+            RegisterInputFunctions(input);
+            RegisterEntityFunctions(world);
+        }
 
         void UpdateTime(float dt)
         {
@@ -30,33 +34,59 @@ namespace Cadmium
             time["elapsed"] = m_ElapsedTime;
         }
 
-        // Loads and executes a script file, returning a fresh environment table
-        // on success. Never throws — failures are logged and return an
-        // invalid (empty) sol::table so the caller can skip creating a
-        // Script component for this entity.
-        sol::table LoadScript(const std::string& path)
+        struct LoadedScript
         {
-            sol::load_result loaded = m_Lua.load_file(path);
-            if (!loaded.valid())
+            std::string path;
+            std::string name;
+
+            sol::environment env;
+
+            sol::protected_function onStart;
+            sol::protected_function onUpdate;
+            sol::protected_function onDestroy;
+
+            bool valid = false;
+        };
+
+        LoadedScript LoadScript(const std::string& path)
+        {
+            LoadedScript loaded;
+            loaded.path = path;
+
+            sol::load_result chunk = m_Lua.load_file(path);
+            if (!chunk.valid())
             {
-                sol::error err = loaded;
+                sol::error err = chunk;
                 Log::Error("ScriptHost", "Failed to load '{}': {}", path, err.what());
-                return sol::lua_nil;
+                return loaded;
             }
 
-            sol::protected_function_result executed = loaded();
-            if (!executed.valid())
+            // Create a fresh environment for this script instance.
+            // Reads fall back to the global Lua state, while writes remain isolated
+            // inside this environment.
+            loaded.env = sol::environment(m_Lua, sol::create, m_Lua.globals());
+
+            // Bind the environment before executing the chunk.
+            sol::protected_function script = chunk;
+            sol::set_environment(loaded.env, script);
+
+            // Execute the script once so it can initialize globals and define callbacks.
+            sol::protected_function_result result = script();
+            if (!result.valid())
             {
-                sol::error err = executed;
+                sol::error err = result;
                 Log::Error("ScriptHost", "Error executing '{}': {}", path, err.what());
-                return sol::lua_nil;
+                return loaded;
             }
 
-            sol::table env = m_Lua.create_table();
-            env["OnStart"] = m_Lua["OnStart"];
-            env["OnUpdate"] = m_Lua["OnUpdate"];
-            env["OnDestroy"] = m_Lua["OnDestroy"];
-            return env;
+            loaded.name = loaded.env["Name"].get_or<std::string>("Unnamed");
+
+            loaded.onStart = loaded.env["OnStart"];
+            loaded.onUpdate = loaded.env["OnUpdate"];
+            loaded.onDestroy = loaded.env["OnDestroy"];
+
+            loaded.valid = true;
+            return loaded;
         }
 
         // Called from Scene::Destroy() before this ScriptHost is destroyed.
@@ -126,13 +156,52 @@ namespace Cadmium
                 "Entity",
                 "GetTransform",
                 [](EntityHandle& self) -> Transform&
-                { return self.world->GetComponent<Transform>(self.entity); });
+                {
+                    if (!self.world->IsValid(self.entity))
+                        throw std::runtime_error(
+                            "GetTransform called on an invalid or destroyed entity");
+                    return self.world->GetComponent<Transform>(self.entity);
+                },
+                "IsValid",
+                [](EntityHandle& self) -> bool { return self.world->IsValid(self.entity); },
+                "GetScript",
+                [](EntityHandle& self, const std::string& name) -> sol::object
+                {
+                    if (!self.world->IsValid(self.entity))
+                        return sol::lua_nil;
+                    if (!self.world->HasComponent<Script>(self.entity))
+                        return sol::lua_nil;
+
+                    auto& script = self.world->GetComponent<Script>(self.entity);
+                    for (auto& instance : script.instances)
+                        if (instance.name == name && instance.env.valid())
+                            return instance.env;
+
+                    return sol::lua_nil;
+                },
+                "Destroy",
+                [](EntityHandle& self) -> void { self.world->DestroyEntity(self.entity); });
         }
         void RegisterInputFunctions(InputManager& input)
         {
             m_Lua.set_function("IsKeyDown",
                                [&input](int scancode) -> bool
                                { return input.IsKeyDown(static_cast<SDL_Scancode>(scancode)); });
+        }
+        void RegisterEntityFunctions(World& world)
+        {
+            m_Lua.set_function("FindEntityByTag",
+                               [this, &world](const std::string& tag) -> sol::object
+                               {
+                                   for (auto entity : world.QueryEntities<Tag>())
+                                   {
+                                       auto& t = world.GetComponent<Tag>(entity);
+                                       if (t.name == tag)
+                                           return sol::make_object(m_Lua,
+                                                                   EntityHandle{&world, entity});
+                                   }
+                                   return sol::lua_nil;
+                               });
         }
         sol::state m_Lua;
         double m_ElapsedTime;

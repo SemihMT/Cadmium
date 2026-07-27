@@ -1,14 +1,23 @@
-function OnStart(self)
-    -- runs once, before the first OnUpdate
-    print("OnStart called!")
+Name = "TestScript"
+
+counter = 0
+
+function OnStart()
+    print(Name .. ": OnStart called!")
 end
 
-function OnUpdate(self,dt)
+function OnUpdate()
+    counter = counter + 1
+    print(Name .. ": OnUpdate called for the " .. counter .. "th time!")
+
     local t = self:GetTransform()
     t.x = t.x + 10 * Time.dt
+
+    if counter >= 100 then
+        self:Destroy()
+    end
 end
 
-function OnDestroy(self)
-    -- runs once when the entity is destroyed mid-scene or when the scene itself is destroyed
-    print("OnDestroy called!")
+function OnDestroy()
+    print(Name .. ": OnDestroy called!")
 end

@@ -12,6 +12,21 @@
 
 namespace Cadmium
 {
+
+    template <typename... Args>
+    void CallProtected(const std::string& hookName, sol::function fn, Args&&... args)
+    {
+        if (!fn.valid())
+            return;
+
+        sol::protected_function_result result = fn(std::forward<Args>(args)...);
+        if (!result.valid())
+        {
+            sol::error err = result;
+            Log::Warn("ScriptSystem", "{} error: {}", hookName, err.what());
+        }
+    }
+
     // ECS System that updates all components with a script
     class ScriptSystem : public System
     {
@@ -22,29 +37,14 @@ namespace Cadmium
             for (auto entity : world.QueryEntities<Script>())
             {
                 auto& script = world.GetComponent<Script>(entity);
-
-                if (!script.started)
+                for (auto& instance : script.instances)
                 {
-                    script.started = true;
-                    if (script.onStart.valid())
+                    if (!instance.started)
                     {
-                        sol::protected_function_result result = script.onStart(script.self);
-                        if (!result.valid())
-                        {
-                            sol::error err = result;
-                            Log::Warn("ScriptSystem", "OnStart error: {}", err.what());
-                        }
+                        instance.started = true;
+                        CallProtected("OnStart", instance.onStart);
                     }
-                }
-
-                if (!script.onUpdate.valid())
-                    continue;
-
-                sol::protected_function_result result = script.onUpdate(script.self, dt);
-                if (!result.valid())
-                {
-                    sol::error err = result;
-                    Log::Warn("ScriptSystem", "OnUpdate error: {}", err.what());
+                    CallProtected("OnUpdate", instance.onUpdate, dt);
                 }
             }
         }
@@ -55,15 +55,8 @@ namespace Cadmium
                 return;
 
             auto& script = world.GetComponent<Script>(entity);
-            if (!script.onDestroy.valid())
-                return;
-
-            sol::protected_function_result result = script.onDestroy(script.self);
-            if (!result.valid())
-            {
-                sol::error err = result;
-                Log::Warn("ScriptSystem", "OnDestroy error: {}", err.what());
-            }
+            for (auto& instance : script.instances)
+                CallProtected("OnDestroy", instance.onDestroy);
         }
     };
 

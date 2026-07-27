@@ -11,6 +11,7 @@ namespace Cadmium
     void World::Update(float dt)
     {
         m_Scheduler.Update(*this, dt);
+        FlushPendingDestroys();
     }
     void World::Stop()
     {
@@ -26,10 +27,40 @@ namespace Cadmium
     }
     void World::DestroyEntity(Entity e)
     {
-        OrphanChildrenOf(e);
-        m_Scheduler.NotifyEntityDestroyed(*this, e);
-        m_Registry.DestroyEntity(e);
+        if (!IsValid(e))
+            return;
+
+        if (std::find(m_PendingDestroy.begin(), m_PendingDestroy.end(), e) !=
+            m_PendingDestroy.end())
+            return;
+
+        m_PendingDestroy.push_back(e);
     }
+    void World::FlushPendingDestroys()
+    {
+        for (Entity e : m_PendingDestroy)
+        {
+            if (!m_Registry.IsValid(e))
+                continue;
+
+            OrphanChildrenOf(e);
+            m_Scheduler.NotifyEntityDestroyed(*this, e);
+            m_Registry.DestroyEntity(e);
+        }
+        m_PendingDestroy.clear();
+    }
+    bool World::IsValid(Entity e) const
+    {
+        if (std::find(m_PendingDestroy.begin(), m_PendingDestroy.end(), e) !=
+            m_PendingDestroy.end())
+            return false;
+        return m_Registry.IsValid(e);
+    }
+    size_t World::EntityCount() const
+    {
+        return m_Registry.EntityCount();
+    }
+
     std::vector<Entity> World::AllEntities()
     {
         return m_Registry.AllEntities();

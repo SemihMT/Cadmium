@@ -12,6 +12,7 @@
 
 
 #include <sol/sol.hpp>
+#include <vector>
 
 namespace Cadmium
 {
@@ -129,13 +130,19 @@ namespace Cadmium
         Entity entity;
     };
 
-    struct Script
+    struct ScriptInstance
     {
-        sol::table self;
+        sol::environment env;
+        std::string name;
         sol::function onStart;
         sol::function onUpdate;
         sol::function onDestroy;
         bool started{false};
+    };
+
+    struct Script
+    {
+        std::vector<ScriptInstance> instances;
     };
 
 } // namespace Cadmium
