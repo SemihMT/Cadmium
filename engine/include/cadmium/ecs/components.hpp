@@ -12,6 +12,7 @@
 
 
 #include <sol/sol.hpp>
+#include <unordered_map>
 #include <vector>
 
 namespace Cadmium
@@ -130,6 +131,15 @@ namespace Cadmium
         Entity entity;
     };
 
+    struct FieldMetadata
+    {
+        sol::optional<double> min;
+        sol::optional<double> max;
+        sol::optional<double> step;
+        sol::optional<std::string> tooltip;
+        sol::optional<std::string> widget;
+    };
+
     struct ScriptInstance
     {
         sol::environment env;
@@ -138,6 +148,9 @@ namespace Cadmium
         sol::function onUpdate;
         sol::function onDestroy;
         bool started{false};
+
+        std::unordered_map<std::string, FieldMetadata> fieldMetadata;
+        std::vector<std::string> fieldOrder;
     };
 
     struct Script

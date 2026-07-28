@@ -19,11 +19,11 @@ namespace Sandbox
 
     Cadmium::Entity player = CreateEntity();
     GetWorld().AddComponent<Cadmium::Tag>(player, {"Player"});
-    AttachScript(player, "assets/scripts/test_script.lua");
+    AttachScript(player, "assets/scripts/test_fields.lua");
 
-    Cadmium::Entity enemy = CreateEntity();
-    AttachScript(enemy, "assets/scripts/enemy_ai.lua");
-    AttachScript(enemy, "assets/scripts/health.lua");
+    // Cadmium::Entity enemy = CreateEntity();
+    // AttachScript(enemy, "assets/scripts/enemy_ai.lua");
+    // AttachScript(enemy, "assets/scripts/health.lua");
 
     RegisterSystem<Cadmium::ScriptSystem>(0);
     RegisterSystem<DebrisSystem>(1);

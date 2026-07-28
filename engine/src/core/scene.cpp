@@ -117,6 +117,8 @@ namespace Cadmium
       instance.onStart = loaded.onStart;
       instance.onUpdate = loaded.onUpdate;
       instance.onDestroy = loaded.onDestroy;
+      instance.fieldMetadata = std::move(loaded.fieldMetadata);
+      instance.fieldOrder = std::move(loaded.fieldOrder);
       instance.env["self"] = EntityHandle{&GetWorld(), e};
 
       if (!GetWorld().HasComponent<Script>(e))

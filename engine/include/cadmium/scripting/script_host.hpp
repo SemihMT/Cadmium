@@ -5,6 +5,8 @@
 #include <cadmium/core/logger.hpp>
 #include <cadmium/ecs/components.hpp>
 #include <cadmium/ecs/world.hpp>
+#include <memory>
+#include <sol/forward.hpp>
 #include <sol/sol.hpp>
 #include <string>
 
@@ -36,16 +38,16 @@ namespace Cadmium
 
         struct LoadedScript
         {
-            std::string path;
-            std::string name;
+          sol::environment env;
+          std::string path;
+          std::string name;
 
-            sol::environment env;
-
-            sol::protected_function onStart;
-            sol::protected_function onUpdate;
-            sol::protected_function onDestroy;
-
-            bool valid = false;
+          sol::protected_function onStart;
+          sol::protected_function onUpdate;
+          sol::protected_function onDestroy;
+          std::unordered_map<std::string, FieldMetadata> fieldMetadata;
+          std::vector<std::string> fieldOrder;
+          bool valid {false};
         };
 
         LoadedScript LoadScript(const std::string& path)
@@ -61,14 +63,82 @@ namespace Cadmium
                 return loaded;
             }
 
-            // Create a fresh environment for this script instance.
-            // Reads fall back to the global Lua state, while writes remain isolated
-            // inside this environment.
-            loaded.env = sol::environment(m_Lua, sol::create, m_Lua.globals());
+            sol::environment env{m_Lua,sol::create, m_Lua.globals()};
+
+            auto pending = std::make_shared<PendingState>();
+            auto metadata = std::make_shared<std::unordered_map<std::string, FieldMetadata>>();
+
+            env.set_function("Range",
+                             [pending, path](double min, double max, sol::optional<double> step)
+                             {
+                                 if (pending->hasRange)
+                                     Log::Warn(
+                                         "ScriptHost",
+                                         "'{}': Range() called twice before a field assignment, "
+                                         "the first call was dropped",
+                                         path);
+
+                                 pending->metadata.min = min;
+                                 pending->metadata.max = max;
+                                 pending->metadata.step = step.value_or(1.0);
+                                 pending->hasRange = true;
+                             });
+
+            env.set_function("Tooltip",
+                             [pending, path](const std::string& text)
+                             {
+                                 if (pending->hasTooltip)
+                                     Log::Warn(
+                                         "ScriptHost",
+                                         "'{}': Tooltip() called twice before a field assignment,"
+                                         "the first call was dropped",
+                                         path);
+
+                                 pending->metadata.tooltip = text;
+                                 pending->hasTooltip = true;
+                             });
+
+            env.set_function("Widget",
+                             [pending, path](const std::string& kind)
+                             {
+                                 if (pending->hasWidget)
+                                     Log::Warn(
+                                         "ScriptHost",
+                                         "'{}': Widget() called twice before a field assignment,"
+                                         "the first call was dropped",
+                                         path);
+
+                                 pending->metadata.widget = kind;
+                                 pending->hasWidget = true;
+                             });
+
+            sol::table meta = m_Lua.create_table();
+            meta[sol::meta_function::index] = m_Lua.globals();
+            auto fieldOrder = std::make_shared<std::vector<std::string>>();
+            meta[sol::meta_function::new_index] =
+                [pending, metadata, fieldOrder](sol::table t, std::string key, sol::object value)
+            {
+                t.raw_set(key, value); // always store the assignment
+
+                if (std::find(fieldOrder->begin(), fieldOrder->end(), key) == fieldOrder->end())
+                {
+                    if (key != "Name" && key != "OnStart" && key != "OnUpdate" &&
+                        key != "OnRender" && key != "OnDestroy" && key != "Range" &&
+                        key != "Tooltip" && key != "Widget")
+                        fieldOrder->push_back(key);
+                }
+
+                if (pending->HasAny())
+                {
+                    (*metadata)[key] = pending->metadata;
+                    *pending = PendingState{};
+                }
+            };
+            env[sol::metatable_key] = meta;
 
             // Bind the environment before executing the chunk.
             sol::protected_function script = chunk;
-            sol::set_environment(loaded.env, script);
+            sol::set_environment(env, script);
 
             // Execute the script once so it can initialize globals and define callbacks.
             sol::protected_function_result result = script();
@@ -78,13 +148,19 @@ namespace Cadmium
                 Log::Error("ScriptHost", "Error executing '{}': {}", path, err.what());
                 return loaded;
             }
-
+            // script executes succesfully but hasPending is still true -> There is a modifier call that did not apply to a field
+            if (pending->HasAny())
+                Log::Warn("ScriptHost",
+                          "'{}': a modifier was declared but never followed by a "
+                          "field assignment, metadata was dropped",
+                          path);
+            loaded.env = env;
             loaded.name = loaded.env["Name"].get_or<std::string>("Unnamed");
-
             loaded.onStart = loaded.env["OnStart"];
             loaded.onUpdate = loaded.env["OnUpdate"];
             loaded.onDestroy = loaded.env["OnDestroy"];
-
+            loaded.fieldMetadata = std::move(*metadata);
+            loaded.fieldOrder = std::move(*fieldOrder);
             loaded.valid = true;
             return loaded;
         }
@@ -102,6 +178,15 @@ namespace Cadmium
         sol::state& GetState() { return m_Lua; }
 
       private:
+        struct PendingState
+        {
+            FieldMetadata metadata;
+            bool hasRange = false;
+            bool hasTooltip = false;
+            bool hasWidget = false;
+
+            bool HasAny() const { return hasRange || hasTooltip || hasWidget; }
+        };
         void InstallPrintOverride()
         {
             m_Lua.set_function("print",
