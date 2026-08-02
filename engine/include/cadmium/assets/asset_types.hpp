@@ -1,51 +1,40 @@
 #ifndef CADMIUM_ASSETS_ASSET_TYPES_HPP
 #define CADMIUM_ASSETS_ASSET_TYPES_HPP
 
-#include <cstdint>
+#include <cadmium/core/handles.hpp>
 #include <string>
 
   namespace Cadmium
   {
-    //  Handle types
-    // Opaque integer handles. 0 is always invalid.
-    // Scripts store and pass these around - they never inspect the value.
+      //  Asset metadata
+      // Stored alongside each loaded asset. Used by the asset panel.
 
-    using TextureHandle = uint32_t;
-    using FontHandle = uint32_t;
-    using SoundHandle = uint32_t; // reserved for audio phase
-    using ScriptHandle = uint32_t;
-
-    static constexpr uint32_t k_InvalidHandle = 0;
-
-    //  Asset metadata
-    // Stored alongside each loaded asset. Used by the asset panel.
-
-    enum class AssetType
-    {
-      Unknown,
-      Texture,
-      Font,
-      Sound,
-      Script,
-      // expandable - Tilemap, Shader, etc.
-    };
-
-    // Experiment: use C++26 to retrieve type names using reflection
-    inline const char *AssetTypeName(AssetType type)
-    {
-      switch (type)
+      enum class AssetType
       {
-      case AssetType::Texture:
-        return "Texture";
-      case AssetType::Font:
-        return "Font";
-      case AssetType::Sound:
-        return "Sound";
-      case AssetType::Script:
-        return "Script";
-      default:
-        return "Unknown";
-      }
+          Unknown,
+          Texture,
+          Font,
+          Sound,
+          Script,
+          // expandable - Tilemap, Shader, etc.
+      };
+
+      // Experiment: use C++26 to retrieve type names using reflection
+      inline const char* AssetTypeName(AssetType type)
+      {
+          switch (type)
+          {
+          case AssetType::Texture:
+              return "Texture";
+          case AssetType::Font:
+              return "Font";
+          case AssetType::Sound:
+              return "Sound";
+          case AssetType::Script:
+              return "Script";
+          default:
+              return "Unknown";
+          }
     }
 
     inline AssetType AssetTypeFromExtension(const std::string &ext)
@@ -68,7 +57,7 @@
 
     struct AssetEntry
     {
-      uint32_t handle = k_InvalidHandle;
+      AssetHandle handle = k_InvalidAsset;
       AssetType type = AssetType::Unknown;
       std::string path;     // relative to project root
       std::string filename; // just the filename for display

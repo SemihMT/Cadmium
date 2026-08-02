@@ -48,6 +48,19 @@ namespace Cadmium
                 }
             }
         }
+        void OnRender(World& world)
+        {
+            for (auto entity : world.QueryEntities<Script>())
+            {
+                auto& script = world.GetComponent<Script>(entity);
+                for (auto& instance : script.instances)
+                {
+                    if (!instance.started)
+                        continue;
+                    CallProtected("OnRender", instance.onRender);
+                }
+            }
+        }
 
         void OnEntityDestroyed(World& world, Entity entity) override
         {

@@ -1,4 +1,6 @@
-#pragma once
+#ifndef CADMIUM_DRAW_COMNMAND_QUEUE
+#define CADMIUM_DRAW_COMNMAND_QUEUE
+#include <cadmium/core/handles.hpp>
 #include <SDL3/SDL.h>
 #include <string>
 #include <variant>
@@ -55,7 +57,7 @@ namespace Cadmium
 
         struct Polygon
         {
-            std::vector<SDL_FPoint> points;
+            std::vector<SDL_FPoint> points; // TODO: move away from SDL types
             Color color;
             bool filled;
         };
@@ -66,10 +68,11 @@ namespace Cadmium
             float x, y;
             float size;
             Color color;
+            FontHandle font;
         };
         struct Sprite
         {
-            uint32_t textureHandle;
+            TextureHandle textureHandle;
             float x, y;
             float w, h;     // 0 = use natural texture size
             float rotation; // degrees
@@ -97,7 +100,7 @@ namespace Cadmium
                                      DrawCmd::ResetCamera>;
 
     // Scripts push commands here during OnRender().
-    // ScriptRenderLayer drains and executes them via SDL.
+    // ScriptRenderLayer drains and executes them.
     // Cleared at the end of each drain
     class DrawCommandQueue
     {
@@ -115,3 +118,4 @@ namespace Cadmium
     };
 
 } // namespace Cadmium
+#endif // CADMIUM_DRAW_COMNMAND_QUEUE

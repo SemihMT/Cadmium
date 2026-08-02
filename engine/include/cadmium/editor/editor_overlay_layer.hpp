@@ -1,6 +1,7 @@
 #ifndef CADMIUM_EDITOR_OVERLAY_LAYER_HPP
 #define CADMIUM_EDITOR_OVERLAY_LAYER_HPP
 
+#include "cadmium/render/renderer.hpp"
 #include <cadmium/editor/register_builtin_components.hpp>
 #include <cadmium/assets/asset_manager.hpp>
 #include <cadmium/assets/asset_types.hpp>
@@ -25,8 +26,8 @@ namespace Cadmium::Editor
     class EditorOverlayLayer : public Layer
     {
       public:
-        EditorOverlayLayer(AssetManager& assets, IEngineContext* context)
-            : Layer("EditorOverlayLayer"), m_Assets(assets), m_AssetPanel(assets),
+        EditorOverlayLayer(AssetManager& assets, IRenderer& renderer, IEngineContext* context)
+            : Layer("EditorOverlayLayer"), m_Assets(assets), m_AssetPanel(assets, renderer),
               m_Context(context),
               m_ViewportPanel([this](int w, int h) { m_Context->ResizeViewport(w, h); })
         {

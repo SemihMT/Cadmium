@@ -21,12 +21,16 @@ target_link_libraries(cadmium-sandbox PRIVATE
 )
 
 copy_sdl_to_output(cadmium-sandbox)
-copy_engine_assets(cadmium-sandbox)
-copy_sandbox_assets(cadmium-sandbox)
+copy_assets_tracked(${CMAKE_SOURCE_DIR}/engine/assets  cadmium-sandbox engine)
+copy_assets_tracked(${CMAKE_SOURCE_DIR}/sandbox/assets cadmium-sandbox sandbox)
 
 if(EMSCRIPTEN)
+    file(GLOB_RECURSE engine_asset_files  CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/engine/assets/*")
+    file(GLOB_RECURSE sandbox_asset_files CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/sandbox/assets/*")
+
     set_target_properties(cadmium-sandbox PROPERTIES
         SUFFIX ".html"
+        LINK_DEPENDS "${engine_asset_files};${sandbox_asset_files}"
     )
     target_link_options(cadmium-sandbox PRIVATE
         -sUSE_SDL=0

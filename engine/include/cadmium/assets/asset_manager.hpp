@@ -2,13 +2,14 @@
 #define CADMIUM_ASSETS_ASSET_MANAGER_HPP
 
 #include "asset_types.hpp"
+#include "cadmium/core/handles.hpp"
+#include "cadmium/render/renderer.hpp"
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <SDL3_image/SDL_image.h>
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include <filesystem>
 
 namespace Cadmium
 {
@@ -27,7 +28,7 @@ public:
     AssetManager(const AssetManager&)            = delete;
     AssetManager& operator=(const AssetManager&) = delete;
 
-    void Init(SDL_Renderer* renderer);
+    void Init(IRenderer& renderer);
 
     // Project root:
     // Set by the engine when a project is opened.
@@ -50,7 +51,6 @@ public:
     // Retrieval:
     // Used internally by ScriptRenderLayer and other engine systems.
     // Returns nullptr for invalid handles.
-    SDL_Texture* GetTexture(TextureHandle handle) const;
     TTF_Font*    GetFont(FontHandle handle) const;
     const std::string* GetScriptSource(ScriptHandle handle) const;
 
@@ -82,12 +82,11 @@ public:
     TextureHandle GetPreviewHandle(const std::string& path);
 
 private:
-    SDL_Renderer* m_Renderer = nullptr;
+    IRenderer* m_Renderer{nullptr};
     std::string   m_ProjectRoot;
 
     // Texture storage:
     std::unordered_map<std::string, TextureHandle> m_TexturePathIndex;
-    std::unordered_map<TextureHandle, SDL_Texture*> m_Textures;
 
     // Font storage:
     // Fonts are keyed by path+size - same file at different sizes = different handle
@@ -102,9 +101,13 @@ private:
     std::vector<AssetEntry> m_Entries;
 
     // Handle generation
-    uint32_t m_NextHandle = 1; // 0 reserved for k_InvalidHandle
+    FontHandle m_NextFontHandle = 1;
+    ScriptHandle m_NextScriptHandle = 1;
+    // SoundHandle m_NextSoundHandle = 1;
 
-    uint32_t NextHandle() { return m_NextHandle++; }
+    uint32_t NextFontHandle() { return m_NextFontHandle++; }
+    uint32_t NextScriptHandle() { return m_NextScriptHandle++; }
+    //uint32_t NextSoundHandle() { return m_NextSoundHandle++; }
 
     // Build font cache key - path + size combined
     static std::string FontKey(const std::string& path, int size)

@@ -1,6 +1,8 @@
 #ifndef CADMIUM_ENGINE_HPP
 #define CADMIUM_ENGINE_HPP
 
+#include "cadmium/core/handles.hpp"
+#include "cadmium/render/renderer.hpp"
 #include <cadmium/core/draw_command_queue.hpp>
 #include <cadmium/editor/render_viewport.hpp>
 #include <cadmium/assets/asset_manager.hpp>
@@ -9,6 +11,7 @@
 #include <cadmium/core/input_manager.hpp>
 #include <cadmium/core/imgui_layer.hpp>
 #include <cadmium/core/event_bus.hpp>
+#include <cadmium/render/text_cache.hpp>
 
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
@@ -35,7 +38,7 @@ namespace Cadmium
     void SetVSync(bool enabled);
     void DisableDefaultBackground();
 
-    SDL_Renderer *GetRenderer() const;
+    SDL_Renderer *GetNativeRenderer() const;
     void SetTargetFPS(int fps);
     void PushGlobalOverlay(std::unique_ptr<Layer> layer);
 
@@ -43,6 +46,7 @@ namespace Cadmium
     void RequestQuit() override;
     int GetWidth() const override;
     int GetHeight() const override;
+    IRenderer& GetRenderer() override;
     void  SetDefaultBackground(bool enabled) override;
 
     Scene *GetActiveScene() override;
@@ -57,8 +61,7 @@ namespace Cadmium
     void PushScene(std::unique_ptr<Scene> scene) override;
     void PopScene() override;
     void ReplaceScene(std::unique_ptr<Scene> scene) override;
-
-    TTF_Font* GetFont() override;
+    TextCache& GetTextCache() override;
     DrawCommandQueue& GetDrawQueue() override;
     AssetManager& GetAssets() override;
     InputManager& GetInput() override;
@@ -81,12 +84,13 @@ namespace Cadmium
     SceneManager m_SceneManager{};
     SDL_Window *m_Window{nullptr};
     SDL_Renderer *m_Renderer{nullptr};
-    TTF_Font *m_Font{nullptr};
-    TextureHandle m_DefaultBackgroundHandle{k_InvalidHandle};
+    std::unique_ptr<IRenderer> m_RenderBackend;
+    TextureHandle m_DefaultBackgroundHandle{k_InvalidTexture};
     ImGuiLayer m_ImGuiLayer{};
     InputManager m_Input{};
     DrawCommandQueue m_DrawQueue{};
     AssetManager m_AssetManager{};
+    TextCache m_TextCache{};
     Editor::RenderViewport m_Viewport{};
     LayerStack m_GlobalLayers{};
 

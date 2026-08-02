@@ -1,6 +1,8 @@
 #ifndef CADMIUM_ENGINE_CONTEXT_HPP
 #define CADMIUM_ENGINE_CONTEXT_HPP
 
+#include "cadmium/render/renderer.hpp"
+#include "cadmium/render/text_cache.hpp"
 #include <cadmium/core/event_bus.hpp>
 #include <cadmium/core/draw_command_queue.hpp>
 #include <cadmium/assets/asset_manager.hpp>
@@ -28,6 +30,7 @@ namespace Cadmium
     virtual void RequestQuit() = 0;
     virtual int GetWidth() const = 0;
     virtual int GetHeight() const = 0;
+    virtual IRenderer& GetRenderer() = 0;
     virtual void SetDefaultBackground(bool enabled) = 0;
     virtual Scene* GetActiveScene() = 0;
     virtual void PushLayer(std::unique_ptr<Layer> layer) = 0;
@@ -38,7 +41,7 @@ namespace Cadmium
     virtual void PushScene(std::unique_ptr<Scene> scene) = 0;
     virtual void PopScene() = 0;
     virtual void ReplaceScene(std::unique_ptr<Scene> scene) = 0;
-    virtual TTF_Font* GetFont() = 0;
+    virtual TextCache& GetTextCache() = 0;
     virtual AssetManager& GetAssets() = 0;
     virtual DrawCommandQueue& GetDrawQueue() = 0;
     virtual InputManager& GetInput() = 0;

@@ -10,6 +10,7 @@
 #include "hud_layer.hpp"
 #include "debug_overlay.hpp"
 #include <cadmium/scripting/script_system.hpp>
+#include <cadmium/scripting/script_render_layer.hpp>
 
 namespace Sandbox
 {
@@ -19,7 +20,7 @@ namespace Sandbox
 
     Cadmium::Entity player = CreateEntity();
     GetWorld().AddComponent<Cadmium::Tag>(player, {"Player"});
-    AttachScript(player, "assets/scripts/test_fields.lua");
+    AttachScript(player, "assets/scripts/player_sprite.lua");
 
     // Cadmium::Entity enemy = CreateEntity();
     // AttachScript(enemy, "assets/scripts/enemy_ai.lua");
@@ -35,6 +36,8 @@ namespace Sandbox
     });
 
     auto state = std::make_shared<GameState>();
+
+    PushLayer(std::make_unique<Cadmium::ScriptRenderLayer>());
     PushLayer(std::make_unique<WorldLayer>(state));
     PushLayer(std::make_unique<RenderLayer>(state));
     PushLayer(std::make_unique<HUDLayer>(state));

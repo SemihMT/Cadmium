@@ -1,3 +1,5 @@
+#include "cadmium/core/handles.hpp"
+#include "cadmium/render/renderer.hpp"
 #include <cadmium/assets/asset_manager.hpp>
 #include <cadmium/core/logger.hpp>
 #include <SDL3/SDL.h>
@@ -17,9 +19,9 @@ AssetManager::~AssetManager()
     UnloadAll();
 }
 
-void AssetManager::Init(SDL_Renderer *renderer)
+void AssetManager::Init(IRenderer& renderer)
 {
-  m_Renderer = renderer;
+  m_Renderer = &renderer;
 }
 
 //  Project root
@@ -49,29 +51,24 @@ TextureHandle AssetManager::LoadTexture(const std::string& path)
         return it->second;
 
     std::string fullPath = ResolvePath(path);
-    SDL_Texture* texture = IMG_LoadTexture(m_Renderer, fullPath.c_str());
+    TextureHandle texHandle = m_Renderer->CreateTextureFromFile(fullPath);
 
-    if (!texture)
+    if (texHandle == k_InvalidTexture)
     {
-        Log::Error("[AssetManager]", "Failed to load texture '{}': {}",
-                path.c_str(), SDL_GetError());
-        return k_InvalidHandle;
+        Log::Error("[AssetManager]", "Failed to load texture '{}'",
+                path.c_str());
+        return k_InvalidTexture;
     }
 
-    TextureHandle handle = NextHandle();
-    m_TexturePathIndex[path]    = handle;
-    m_Textures[handle]          = texture;
+    m_TexturePathIndex[path]= texHandle;
 
-    // Get dimensions for the entry
-    float w = 0, h = 0;
-    SDL_GetTextureSize(texture, &w, &h);
-
-    UpdateEntry(path, AssetType::Texture, handle, (int)w, (int)h);
+    TextureDesc desc = m_Renderer->GetTextureDesc(texHandle);
+    UpdateEntry(path, AssetType::Texture, texHandle, desc.width, desc.height);
 
     Log::Info("[AssetManager]", "Loaded texture '{}' ({}x{}) → handle {}",
-            path.c_str(), (int)w, (int)h, handle);
+            path.c_str(), desc.width, desc.height, texHandle);
 
-    return handle;
+    return texHandle;
 }
 
 FontHandle AssetManager::LoadFont(const std::string& path, int size)
@@ -89,10 +86,10 @@ FontHandle AssetManager::LoadFont(const std::string& path, int size)
     {
         Log::Error("[AssetManager]", "Failed to load font '{}' at size {}: {}",
                 path.c_str(), size, SDL_GetError());
-        return k_InvalidHandle;
+        return k_InvalidFont;
     }
 
-    FontHandle handle = NextHandle();
+    FontHandle handle = NextFontHandle();
     m_FontPathIndex[key] = handle;
     m_Fonts[handle]      = font;
 
@@ -117,14 +114,14 @@ ScriptHandle AssetManager::LoadScript(const std::string &path)
     if (!file.is_open())
     {
         Log::Error("[AssetManager]", "Failed to open script '{}'", path.c_str());
-        return k_InvalidHandle;
+        return k_InvalidScript;
     }
 
     std::ostringstream oss;
     oss << file.rdbuf();
     std::string source = oss.str();
 
-    ScriptHandle handle = NextHandle();
+    ScriptHandle handle = NextScriptHandle();
     m_ScriptPathIndex[path] = handle;
     m_Scripts[handle]       = source;
 
@@ -135,42 +132,26 @@ ScriptHandle AssetManager::LoadScript(const std::string &path)
     return handle;
 }
 //  Retrieval
-
-SDL_Texture* AssetManager::GetTexture(TextureHandle handle) const
-{
-    if (handle == k_InvalidHandle) return nullptr;
-    auto it = m_Textures.find(handle);
-    return it != m_Textures.end() ? it->second : nullptr;
-}
-
 TTF_Font* AssetManager::GetFont(FontHandle handle) const
 {
-    if (handle == k_InvalidHandle) return nullptr;
+    if (handle == k_InvalidFont) return nullptr;
     auto it = m_Fonts.find(handle);
     return it != m_Fonts.end() ? it->second : nullptr;
 }
 
 const std::string *AssetManager::GetScriptSource(ScriptHandle handle) const
 {
-    if (handle == k_InvalidHandle)
+    if (handle == k_InvalidScript)
         return nullptr;
     auto it = m_Scripts.find(handle);
     return it != m_Scripts.end() ? &it->second : nullptr;
 }
 
 //  Unloading
-
 void AssetManager::UnloadTexture(TextureHandle handle)
 {
-    auto it = m_Textures.find(handle);
-    if (it == m_Textures.end()) return;
-
-    SDL_DestroyTexture(it->second);
-    m_Textures.erase(it);
-
-    // Remove from path index
-    for (auto pit = m_TexturePathIndex.begin();
-         pit != m_TexturePathIndex.end(); ++pit)
+    m_Renderer->DestroyTexture(handle);
+    for (auto pit = m_TexturePathIndex.begin(); pit != m_TexturePathIndex.end(); ++pit)
     {
         if (pit->second == handle)
         {
@@ -179,7 +160,6 @@ void AssetManager::UnloadTexture(TextureHandle handle)
         }
     }
 
-    // Mark entry as unloaded
     for (auto& entry : m_Entries)
     {
         if (entry.handle == handle)
@@ -248,9 +228,8 @@ void AssetManager::UnloadScript(ScriptHandle handle)
 
 void AssetManager::UnloadAll()
 {
-    for (auto& [handle, texture] : m_Textures)
-        SDL_DestroyTexture(texture);
-    m_Textures.clear();
+    for (auto& [path, handle] : m_TexturePathIndex)
+        m_Renderer->DestroyTexture(handle);
     m_TexturePathIndex.clear();
 
     for (auto& [handle, font] : m_Fonts)
@@ -304,7 +283,7 @@ void AssetManager::ScanProjectFiles()
         std::replace(relativePath.begin(), relativePath.end(), '\\', '/');
 
         AssetEntry entry;
-        entry.handle   = k_InvalidHandle; // not loaded yet
+        entry.handle   = k_InvalidAsset; // not loaded yet
         entry.type     = type;
         entry.path     = relativePath;
         entry.filename = filePath.filename().string();

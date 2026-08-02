@@ -1,6 +1,7 @@
 #ifndef CADMIUM_EDITOR_IMGUI_ASSET_PANEL_HPP
 #define CADMIUM_EDITOR_IMGUI_ASSET_PANEL_HPP
 
+#include "cadmium/render/renderer.hpp"
 #include <cadmium/assets/asset_manager.hpp>
 #include <cadmium/core/cadmium_theme.hpp>
 #include <functional>
@@ -21,8 +22,8 @@ public:
     // Callback signature: (relativePath, assetType)
     using SelectCallback = std::function<void(const std::string&, AssetType)>;
 
-    explicit AssetPanel(AssetManager& assets)
-        : m_Assets(assets)
+    explicit AssetPanel(AssetManager& assets, IRenderer& renderer)
+        : m_Assets(assets), m_Renderer(renderer)
     {}
 
     void SetOnSelect(SelectCallback cb) { m_OnSelect = std::move(cb); }
@@ -135,6 +136,7 @@ private:
     enum class ViewMode { List, Grid };
 
     AssetManager&  m_Assets;
+    IRenderer& m_Renderer;
     SelectCallback m_OnSelect;
     ViewMode       m_ViewMode    = ViewMode::Grid;
     int            m_ThumbnailSize = 96;
@@ -221,9 +223,8 @@ private:
 
             if (entry->type == AssetType::Texture && entry->loaded)
             {
-                SDL_Texture *tex = m_Assets.GetTexture(entry->handle);
-
-                if (tex)
+                void* native = m_Renderer.GetNativeTextureHandle(entry->handle);
+                if (native)
                 {
                     float aspect = (entry->height > 0)
                                        ? (float)entry->width / (float)entry->height
@@ -247,7 +248,7 @@ private:
 
                     // Draw centered texture manually
                     ImGui::GetWindowDrawList()->AddImage(
-                        (ImTextureID)(intptr_t)tex,
+                        (ImTextureID)(intptr_t)native,
                         ImVec2(cursor.x + padX, cursor.y + padY),
                         ImVec2(cursor.x + padX + dispW,
                                cursor.y + padY + dispH));
@@ -366,7 +367,7 @@ private:
 
         if (entry.type == AssetType::Texture && entry.loaded)
         {
-            ImGui::Text("Size:   %d × %d px", entry.width, entry.height);
+            ImGui::Text("Size:   %d x %d px", entry.width, entry.height);
             ImGui::Text("Handle: %u", entry.handle);
         }
 

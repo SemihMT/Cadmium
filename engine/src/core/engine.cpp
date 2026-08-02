@@ -3,6 +3,7 @@
 #include <cadmium/core/assets.hpp>
 #include <cadmium/core/engine.hpp>
 #include <cadmium/core/logger.hpp>
+#include <cadmium/render/sdl_renderer.hpp>
 #include <memory>
 #include <stdexcept>
 
@@ -34,14 +35,14 @@ namespace Cadmium
         if (!m_Renderer)
             throw std::runtime_error(SDL_GetError());
 
-        m_AssetManager.Init(m_Renderer);
-
-        if (!TTF_Init())
+         if (!TTF_Init())
             throw std::runtime_error(SDL_GetError());
 
-        m_Font = TTF_OpenFont(AssetPath("assets/fonts/JetBrainsMono-Regular.ttf").c_str(), 96);
-        if (!m_Font)
-            Log::Error("[SDL_TTF]", "Failed to load font: {}", SDL_GetError());
+        m_TextCache.Init(m_Renderer, AssetPath("assets/fonts/JetBrainsMono-Regular.ttf"), 96.0f);
+        m_RenderBackend = std::make_unique<SDLRenderer>(m_Renderer, m_TextCache);
+        m_AssetManager.Init(*m_RenderBackend);
+
+
 
         m_Frequency = SDL_GetPerformanceFrequency();
         m_LastCounter = SDL_GetPerformanceCounter();
@@ -58,12 +59,10 @@ namespace Cadmium
     Engine::~Engine()
     {
         m_ImGuiLayer.Shutdown();
-        if (m_Font)
-            TTF_CloseFont(m_Font);
-        TTF_Quit();
         SDL_DestroyRenderer(m_Renderer);
         SDL_DestroyWindow(m_Window);
         SDL_Quit();
+        TTF_Quit();
     }
 
     void Engine::Run()
@@ -174,14 +173,13 @@ namespace Cadmium
             if (!m_Viewport.Bind())
                 m_UseViewport = false;
         }
+        m_RenderBackend->BeginFrame();
 
         SDL_RenderClear(m_Renderer);
 
         if (m_UseDefaultBackground)
         {
-            SDL_Texture* bg = m_AssetManager.GetTexture(m_DefaultBackgroundHandle);
-            if (bg)
-                SDL_RenderTexture(m_Renderer, bg, nullptr, nullptr);
+            m_RenderBackend->DrawFullscreenTexture(m_DefaultBackgroundHandle);
         }
 
         for (auto& layer : layerStack)
@@ -189,6 +187,8 @@ namespace Cadmium
 
         for (auto& layer : m_GlobalLayers)
             layer->OnRender(m_Renderer);
+
+        m_RenderBackend->EndFrame();
 
         if (m_UseViewport && m_Viewport.IsReady())
             m_Viewport.Unbind();
@@ -276,7 +276,7 @@ namespace Cadmium
     {
         return m_Viewport;
     }
-    SDL_Renderer* Engine::GetRenderer() const
+    SDL_Renderer* Engine::GetNativeRenderer() const
     {
         return m_Renderer;
     }
@@ -302,6 +302,10 @@ namespace Cadmium
     int Engine::GetHeight() const
     {
         return (m_UseViewport && m_Viewport.IsReady()) ? m_Viewport.GetHeight() : m_Height;
+    }
+    IRenderer& Engine::GetRenderer()
+    {
+        return *m_RenderBackend;
     }
 
     void Engine::SetDefaultBackground(bool enabled)
@@ -369,9 +373,9 @@ namespace Cadmium
         m_SceneManager.RequestReplace(std::move(scene));
     }
 
-    TTF_Font* Engine::GetFont()
+    TextCache& Engine::GetTextCache()
     {
-        return m_Font;
+        return m_TextCache;
     }
 
     DrawCommandQueue& Engine::GetDrawQueue()

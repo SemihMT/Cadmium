@@ -1,6 +1,8 @@
 #ifndef CADMIUM_SCRIPTING_SCRIPT_HOST
 #define CADMIUM_SCRIPTING_SCRIPT_HOST
 
+#include <cadmium/assets/asset_manager.hpp>
+#include <cadmium/core/draw_command_queue.hpp>
 #include <cadmium/core/input_manager.hpp>
 #include <cadmium/core/logger.hpp>
 #include <cadmium/ecs/components.hpp>
@@ -9,6 +11,7 @@
 #include <sol/forward.hpp>
 #include <sol/sol.hpp>
 #include <string>
+
 
 namespace Cadmium
 {
@@ -22,10 +25,15 @@ namespace Cadmium
             RegisterCoreTypes();
         }
 
-        void Configure(InputManager& input, World& world)
+        void Configure(InputManager& input,
+                       World& world,
+                       DrawCommandQueue& drawQueue,
+                       AssetManager& assets)
         {
             RegisterInputFunctions(input);
             RegisterEntityFunctions(world);
+            RegisterDrawFunctions(drawQueue);
+            RegisterAssetFunctions(assets);
         }
 
         void UpdateTime(float dt)
@@ -38,16 +46,17 @@ namespace Cadmium
 
         struct LoadedScript
         {
-          sol::environment env;
-          std::string path;
-          std::string name;
+            sol::environment env;
+            std::string path;
+            std::string name;
 
-          sol::protected_function onStart;
-          sol::protected_function onUpdate;
-          sol::protected_function onDestroy;
-          std::unordered_map<std::string, FieldMetadata> fieldMetadata;
-          std::vector<std::string> fieldOrder;
-          bool valid {false};
+            sol::protected_function onStart;
+            sol::protected_function onUpdate;
+            sol::protected_function onRender;
+            sol::protected_function onDestroy;
+            std::unordered_map<std::string, FieldMetadata> fieldMetadata;
+            std::vector<std::string> fieldOrder;
+            bool valid{false};
         };
 
         LoadedScript LoadScript(const std::string& path)
@@ -63,7 +72,7 @@ namespace Cadmium
                 return loaded;
             }
 
-            sol::environment env{m_Lua,sol::create, m_Lua.globals()};
+            sol::environment env{m_Lua, sol::create, m_Lua.globals()};
 
             auto pending = std::make_shared<PendingState>();
             auto metadata = std::make_shared<std::unordered_map<std::string, FieldMetadata>>();
@@ -148,7 +157,8 @@ namespace Cadmium
                 Log::Error("ScriptHost", "Error executing '{}': {}", path, err.what());
                 return loaded;
             }
-            // script executes succesfully but hasPending is still true -> There is a modifier call that did not apply to a field
+            // script executes succesfully but hasPending is still true -> There is a modifier call
+            // that did not apply to a field
             if (pending->HasAny())
                 Log::Warn("ScriptHost",
                           "'{}': a modifier was declared but never followed by a "
@@ -158,6 +168,7 @@ namespace Cadmium
             loaded.name = loaded.env["Name"].get_or<std::string>("Unnamed");
             loaded.onStart = loaded.env["OnStart"];
             loaded.onUpdate = loaded.env["OnUpdate"];
+            loaded.onRender = loaded.env["OnRender"];
             loaded.onDestroy = loaded.env["OnDestroy"];
             loaded.fieldMetadata = std::move(*metadata);
             loaded.fieldOrder = std::move(*fieldOrder);
@@ -266,6 +277,28 @@ namespace Cadmium
                 },
                 "Destroy",
                 [](EntityHandle& self) -> void { self.world->DestroyEntity(self.entity); });
+
+            m_Lua.new_usertype<Color>(
+                "Color",
+                sol::constructors<Color(), Color(float, float, float, float)>(),
+                "r",
+                &Color::r,
+                "g",
+                &Color::g,
+                "b",
+                &Color::b,
+                "a",
+                &Color::a);
+
+            sol::table colors = m_Lua.create_named_table("Colors");
+            colors["White"] = Color::White();
+            colors["Black"] = Color::Black();
+            colors["Red"] = Color::Red();
+            colors["Green"] = Color::Green();
+            colors["Blue"] = Color::Blue();
+            colors["Yellow"] = Color::Yellow();
+            colors["Cyan"] = Color::Cyan();
+            colors["Magenta"] = Color::Magenta();
         }
         void RegisterInputFunctions(InputManager& input)
         {
@@ -287,6 +320,109 @@ namespace Cadmium
                                    }
                                    return sol::lua_nil;
                                });
+        }
+
+        void RegisterDrawFunctions(DrawCommandQueue& queue)
+        {
+            m_Lua.set_function(
+                "DrawLine",
+                [&queue](float x1, float y1, float x2, float y2, sol::optional<Color> color)
+                { queue.Push(DrawCmd::Line{x1, y1, x2, y2, color.value_or(Color::White())}); });
+
+            m_Lua.set_function(
+                "DrawRect",
+                [&queue](float x,
+                         float y,
+                         float w,
+                         float h,
+                         sol::optional<Color> color,
+                         sol::optional<bool> filled)
+                {
+                    queue.Push(DrawCmd::Rect{
+                        x, y, w, h, color.value_or(Color::White()), filled.value_or(false)});
+                });
+
+            m_Lua.set_function("DrawCircle",
+                               [&queue](float x,
+                                        float y,
+                                        float radius,
+                                        sol::optional<Color> color,
+                                        sol::optional<bool> filled,
+                                        sol::optional<int> segments)
+                               {
+                                   queue.Push(DrawCmd::Circle{x,
+                                                              y,
+                                                              radius,
+                                                              segments.value_or(0),
+                                                              color.value_or(Color::White()),
+                                                              filled.value_or(false)});
+                               });
+
+            m_Lua.set_function(
+                "DrawPolygon",
+                [&queue](sol::table points, sol::optional<Color> color, sol::optional<bool> filled)
+                {
+                    std::vector<SDL_FPoint> pts;
+                    pts.reserve(points.size());
+                    for (auto& kv : points)
+                    {
+                        sol::table p = kv.second;
+                        pts.push_back(SDL_FPoint{p.get_or("x", 0.0f), p.get_or("y", 0.0f)});
+                    }
+                    queue.Push(DrawCmd::Polygon{
+                        std::move(pts), color.value_or(Color::White()), filled.value_or(false)});
+                });
+
+            m_Lua.set_function("DrawSprite",
+                               [&queue](TextureHandle handle,
+                                        float x,
+                                        float y,
+                                        sol::optional<float> w,
+                                        sol::optional<float> h,
+                                        sol::optional<float> rotation,
+                                        sol::optional<Color> color,
+                                        sol::optional<bool> flipX,
+                                        sol::optional<bool> flipY)
+                               {
+                                   DrawCmd::Sprite cmd{};
+                                   cmd.textureHandle = handle;
+                                   cmd.x = x;
+                                   cmd.y = y;
+                                   cmd.w = w.value_or(
+                                       0.0f); // 0 = natural texture size, resolved at draw time
+                                   cmd.h = h.value_or(0.0f);
+                                   cmd.rotation = rotation.value_or(0.0f);
+                                   cmd.color = color.value_or(Color::White());
+                                   cmd.flipX = flipX.value_or(false);
+                                   cmd.flipY = flipY.value_or(false);
+                                   queue.Push(cmd);
+                               });
+
+            m_Lua.set_function(
+                "DrawText",
+                [&queue](const std::string& str,
+                         float x,
+                         float y,
+                         sol::optional<float> size,
+                         sol::optional<Color> color)
+                {
+                    queue.Push(DrawCmd::Text{
+                        str, x, y, size.value_or(16.0f), color.value_or(Color::White())});
+                });
+
+            m_Lua.set_function("SetCamera",
+                               [&queue](float x, float y, sol::optional<float> zoom)
+                               { queue.Push(DrawCmd::SetCamera{x, y, zoom.value_or(1.0f)}); });
+
+            m_Lua.set_function("ResetCamera", [&queue]() { queue.Push(DrawCmd::ResetCamera{}); });
+        }
+        void RegisterAssetFunctions(AssetManager& assets)
+        {
+            sol::table assetsTable = m_Lua.create_named_table("Assets");
+
+            assetsTable.set_function("LoadTexture",
+                                     [&assets](const std::string& path) -> TextureHandle
+                                     { return assets.LoadTexture(path); });
         }
         sol::state m_Lua;
         double m_ElapsedTime;

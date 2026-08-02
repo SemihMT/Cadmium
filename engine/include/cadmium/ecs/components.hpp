@@ -146,6 +146,7 @@ namespace Cadmium
         std::string name;
         sol::function onStart;
         sol::function onUpdate;
+        sol::function onRender;
         sol::function onDestroy;
         bool started{false};
 

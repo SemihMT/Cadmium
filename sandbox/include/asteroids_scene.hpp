@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SANDBOX_ASTEROIDS_SCENE
+#define SANDBOX_ASTEROIDS_SCENE
 
 #include <cadmium/core/scene.hpp>
 #include <sol/sol.hpp>
@@ -15,8 +16,7 @@ namespace Sandbox
 
   private:
     Cadmium::SubscriptionToken m_ReturnToken;
-    // TESTING
-    sol::state m_Lua;
   };
 
 } // namespace Sandbox
+#endif // SANDBOX_ASTEROIDS_SCENE

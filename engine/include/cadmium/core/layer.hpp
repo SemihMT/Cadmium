@@ -34,6 +34,7 @@ namespace Cadmium
     void Quit()                                     { m_Context->RequestQuit(); }
     int GetWidth() const                            { return m_Context->GetWidth(); }
     int GetHeight() const                           { return m_Context->GetHeight(); }
+    virtual IRenderer& GetRenderer()                { return m_Context->GetRenderer(); }
     void SetDefaultBackground(bool enabled)         { m_Context->SetDefaultBackground(enabled); }
     Scene* GetActiveScene()                         { return m_Context->GetActiveScene(); }
     void PushLayer(std::unique_ptr<Layer> layer)    { m_Context->PushLayer(std::move(layer)); }
@@ -41,6 +42,8 @@ namespace Cadmium
     void PopLayer(const std::string &name)          { m_Context->PopLayer(name); }
     void PopOverlay(const std::string &name)        { m_Context->PopOverlay(name); }
     AssetManager& GetAssets()                       { return m_Context->GetAssets(); }
+    DrawCommandQueue& GetDrawQueue()                { return m_Context->GetDrawQueue(); }
+    TextCache& GetTextCache()                       { return m_Context->GetTextCache(); }
     Editor::RenderViewport& GetViewport()           { return m_Context->GetViewport(); }
     World &GetWorld();
 

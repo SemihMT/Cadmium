@@ -5,6 +5,12 @@
 namespace Cadmium
 {
   // Engine-facing interface
+  void Scene::Enter()
+  {
+      m_ScriptHost.Configure(
+          m_Context->GetInput(), m_World, m_Context->GetDrawQueue(), m_Context->GetAssets());
+      OnEnter();
+  }
   void Scene::Destroy()
   {
       OnDestroy();
@@ -75,10 +81,6 @@ namespace Cadmium
   {
     m_LayerStack.RequestPopOverlay(name);
   }
-  TTF_Font* Scene::GetFont()
-  {
-    return m_Context->GetFont();
-  }
   DrawCommandQueue &Scene::GetDrawQueue()
   {
     return m_Context->GetDrawQueue();
@@ -116,6 +118,7 @@ namespace Cadmium
       instance.name = loaded.name;
       instance.onStart = loaded.onStart;
       instance.onUpdate = loaded.onUpdate;
+      instance.onRender = loaded.onRender;
       instance.onDestroy = loaded.onDestroy;
       instance.fieldMetadata = std::move(loaded.fieldMetadata);
       instance.fieldOrder = std::move(loaded.fieldOrder);

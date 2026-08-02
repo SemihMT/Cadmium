@@ -19,11 +19,7 @@ namespace Cadmium
     explicit Scene(std::string name) : m_Name{std::move(name)} { m_World.SetOwningScene(this); }
 
     virtual ~Scene() = default;
-    void Enter()
-    {
-        m_ScriptHost.Configure(m_Context->GetInput(), m_World);
-        OnEnter();
-    }
+    void Enter();
     void Destroy();
 
     virtual void OnEnter() {}

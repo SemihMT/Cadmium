@@ -1,24 +1,22 @@
-#pragma once
+#ifndef SANDBOX_STRESS_SCENE
+#define SANDBOX_STRESS_SCENE
 
 #include <cadmium/core/scene.hpp>
-#include "movement_system.hpp"
-#include "stress_render_layer.hpp"
-#include "stress_debug_overlay.hpp"
-#include "menu_events.hpp"
 
 namespace Sandbox
 {
-  class MenuScene; // forward declaration
+    class MenuScene;
 
-  class StressScene : public Cadmium::Scene
-  {
-  public:
-    StressScene() : Cadmium::Scene("StressTest") {}
-    void OnEnter()   override;
-    void OnDestroy() override;
+    class StressScene : public Cadmium::Scene
+    {
+      public:
+        StressScene() : Cadmium::Scene("StressTest") {}
+        void OnEnter() override;
+        void OnDestroy() override;
 
-  private:
-    Cadmium::SubscriptionToken m_ReturnToken;
-  };
+      private:
+        Cadmium::SubscriptionToken m_ReturnToken;
+    };
 
 } // namespace Sandbox
+#endif // SANDBOX_STRESS_SCENE

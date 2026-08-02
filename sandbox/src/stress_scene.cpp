@@ -1,5 +1,9 @@
 #include "stress_scene.hpp"
-#include "menu_scene.hpp" // complete type needed for make_unique
+#include "menu_events.hpp"
+#include "menu_scene.hpp"
+#include "movement_system.hpp"
+#include "stress_debug_overlay.hpp"
+#include "stress_render_layer.hpp"
 
 namespace Sandbox
 {
