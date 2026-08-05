@@ -8,6 +8,8 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SDL3)
 
+include(cmake/webgpu.cmake)
+
 set(SDLTTF_VENDORED ON)
 FetchContent_Declare(
     SDL_ttf
@@ -76,6 +78,7 @@ FetchContent_MakeAvailable(emscripten_browser_clipboard)
 endif()
 
 if(NOT EMSCRIPTEN)
+
     FetchContent_Declare(
         Catch2
         GIT_REPOSITORY https://github.com/catchorg/Catch2

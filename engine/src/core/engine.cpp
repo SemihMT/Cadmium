@@ -1,9 +1,11 @@
-#include "cadmium/core/layer.hpp"
+#include <cadmium/core/layer.hpp>
+#include <cadmium/render/renderer_backend.hpp>
 #include <algorithm>
 #include <cadmium/core/assets.hpp>
 #include <cadmium/core/engine.hpp>
 #include <cadmium/core/logger.hpp>
 #include <cadmium/render/sdl_renderer.hpp>
+#include <cadmium/render/webgpu_renderer.hpp>
 #include <memory>
 #include <stdexcept>
 
@@ -18,7 +20,7 @@ namespace Cadmium
     }
 #endif
 
-    Engine::Engine(const char* title, int width, int height) : m_Width{width}, m_Height{height}
+    Engine::Engine(const char* title, int width, int height, RendererBackend backend) : m_Width{width}, m_Height{height}, m_Backend{backend}
     {
         Cadmium::AddStdoutSink();
         Cadmium::Log::Info("Engine", "Initializing engine!");
@@ -31,18 +33,36 @@ namespace Cadmium
         if (!m_Window)
             throw std::runtime_error(SDL_GetError());
 
-        m_Renderer = SDL_CreateRenderer(m_Window, nullptr);
-        if (!m_Renderer)
-            throw std::runtime_error(SDL_GetError());
+        if (m_Backend == RendererBackend::SDL2D)
+        {
 
-         if (!TTF_Init())
-            throw std::runtime_error(SDL_GetError());
+            m_Renderer = SDL_CreateRenderer(m_Window, nullptr);
+            if (!m_Renderer)
+                throw std::runtime_error(SDL_GetError());
 
-        m_TextCache.Init(m_Renderer, AssetPath("assets/fonts/JetBrainsMono-Regular.ttf"), 96.0f);
-        m_RenderBackend = std::make_unique<SDLRenderer>(m_Renderer, m_TextCache);
-        m_AssetManager.Init(*m_RenderBackend);
+            if (!TTF_Init())
+                throw std::runtime_error(SDL_GetError());
 
-
+            m_TextCache.Init(m_Renderer, AssetPath("assets/fonts/JetBrainsMono-Regular.ttf"), 96.0f);
+            m_RenderBackend = std::make_unique<SDLRenderer>(m_Renderer, m_TextCache);
+            m_AssetManager.Init(*m_RenderBackend);
+            m_ImGuiLayer.Init(m_Window, m_Renderer);
+            m_RendererReady = true;
+        }
+        else
+        {
+            auto webgpu = std::make_unique<WebGPURenderer>(m_Window, m_Width, m_Height);
+            webgpu->RequestDevice(
+                [this](bool ok)
+                {
+                    m_RendererReady = ok;
+                    if (!ok)
+                        Cadmium::Log::Error("Engine", "WebGPU device negotiation failed");
+                    else
+                        m_AssetManager.Init(*m_RenderBackend);
+                });
+            m_RenderBackend = std::move(webgpu);
+        }
 
         m_Frequency = SDL_GetPerformanceFrequency();
         m_LastCounter = SDL_GetPerformanceCounter();
@@ -51,18 +71,25 @@ namespace Cadmium
         SetVSync(true);
 #endif
 
-        TrySetDefaultBackground();
+        //TrySetDefaultBackground();
 
-        m_ImGuiLayer.Init(m_Window, m_Renderer);
     }
 
     Engine::~Engine()
     {
-        m_ImGuiLayer.Shutdown();
-        SDL_DestroyRenderer(m_Renderer);
-        SDL_DestroyWindow(m_Window);
-        SDL_Quit();
-        TTF_Quit();
+        if(m_Backend == RendererBackend::SDL2D)
+        {
+            m_ImGuiLayer.Shutdown();
+            SDL_DestroyRenderer(m_Renderer);
+            SDL_DestroyWindow(m_Window);
+            SDL_Quit();
+            TTF_Quit();
+        }
+
+        if(m_Backend == RendererBackend::WebGPU)
+        {
+
+        }
     }
 
     void Engine::Run()
@@ -87,6 +114,8 @@ namespace Cadmium
 
     void Engine::Iterate()
     {
+        if (!m_RendererReady)
+            return;
         Uint64 frameStart = SDL_GetPerformanceCounter();
 
         Uint64 counter = frameStart;
@@ -107,7 +136,8 @@ namespace Cadmium
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
-            m_ImGuiLayer.ProcessEvent(event);
+            // TODO: make imgui init adapt to chosen renderer
+            //m_ImGuiLayer.ProcessEvent(event);
             if (event.type == SDL_EVENT_QUIT)
             {
                 RequestQuit();
@@ -193,12 +223,12 @@ namespace Cadmium
         if (m_UseViewport && m_Viewport.IsReady())
             m_Viewport.Unbind();
 
-        m_ImGuiLayer.Begin();
-        for (auto &layer : m_GlobalLayers)
-            layer->OnImGuiRender();
-        for (auto& layer : layerStack)
-            layer->OnImGuiRender();
-        m_ImGuiLayer.End(m_Renderer);
+        // m_ImGuiLayer.Begin();
+        // for (auto& layer : m_GlobalLayers)
+        //     layer->OnImGuiRender();
+        // for (auto& layer : layerStack)
+        //     layer->OnImGuiRender();
+        // m_ImGuiLayer.End(m_Renderer);
 
         SDL_RenderPresent(m_Renderer);
         eventBus.Dispatch();

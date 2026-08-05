@@ -1,7 +1,7 @@
 #ifndef CADMIUM_SCENE_HPP
 #define CADMIUM_SCENE_HPP
 
-#include "cadmium/ecs/components.hpp"
+#include <cadmium/ecs/components.hpp>
 #include <cadmium/core/layer_stack.hpp>
 #include <cadmium/core/event_bus.hpp>
 #include <cadmium/ecs/world.hpp>
@@ -9,7 +9,6 @@
 #include <string>
 #include <memory>
 #include <functional>
-
 namespace Cadmium
 {
   class IEngineContext;

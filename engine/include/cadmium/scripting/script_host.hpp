@@ -362,12 +362,12 @@ namespace Cadmium
                 "DrawPolygon",
                 [&queue](sol::table points, sol::optional<Color> color, sol::optional<bool> filled)
                 {
-                    std::vector<SDL_FPoint> pts;
+                    std::vector<glm::vec2> pts;
                     pts.reserve(points.size());
                     for (auto& kv : points)
                     {
                         sol::table p = kv.second;
-                        pts.push_back(SDL_FPoint{p.get_or("x", 0.0f), p.get_or("y", 0.0f)});
+                        pts.push_back(glm::vec2{p.get_or("x", 0.0f), p.get_or("y", 0.0f)});
                     }
                     queue.Push(DrawCmd::Polygon{
                         std::move(pts), color.value_or(Color::White()), filled.value_or(false)});

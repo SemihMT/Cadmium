@@ -1,7 +1,7 @@
 #ifndef CADMIUM_DRAW_COMNMAND_QUEUE
 #define CADMIUM_DRAW_COMNMAND_QUEUE
+#include <glm/ext/vector_float2.hpp>
 #include <cadmium/core/handles.hpp>
-#include <SDL3/SDL.h>
 #include <string>
 #include <variant>
 #include <vector>
@@ -57,7 +57,7 @@ namespace Cadmium
 
         struct Polygon
         {
-            std::vector<SDL_FPoint> points; // TODO: move away from SDL types
+            std::vector<glm::vec2> points;
             Color color;
             bool filled;
         };

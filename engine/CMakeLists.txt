@@ -13,6 +13,8 @@ add_library(cadmium-engine STATIC
     src/ecs/world.cpp
     src/assets/asset_manager.cpp
     src/editor/register_builtin_components.cpp
+    src/render/webgpu_renderer.cpp
+    src/render/native_surface.cpp
 )
 
 target_include_directories(cadmium-engine
@@ -30,7 +32,7 @@ target_link_libraries(cadmium-engine
         SDL3_ttf::SDL3_ttf
         SDL3_image::SDL3_image
         glm::glm
-
+        cadmium-webgpu
 )
 
 target_compile_definitions(cadmium-engine
@@ -41,9 +43,7 @@ target_compile_definitions(cadmium-engine
 
 if(EMSCRIPTEN)
     target_compile_definitions(cadmium-engine PUBLIC CADMIUM_PLATFORM_WEB)
-    target_include_directories(cadmium-engine PRIVATE
-        ${emscripten_browser_clipboard_SOURCE_DIR}
-    )
+    target_include_directories(cadmium-engine PRIVATE ${emscripten_browser_clipboard_SOURCE_DIR})
 endif()
 
 if(CADMIUM_IMGUI)
