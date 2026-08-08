@@ -40,20 +40,33 @@ namespace Cadmium
         // they migrate to IRenderer; once nothing calls this, delete it.
         SDL_Renderer* GetNativeHandle() const { return m_Renderer; }
 
-        void BeginFrame() override
+        void BeginFrame(Cadmium::Color clearColor) override
         {
-            // Cached once per frame rather than re-queried per draw call.
-            // SDL_GetCurrentRenderOutputSize (not the plain
-            // SDL_GetRenderOutputSize) so this stays correct if a render
-            // target is active - e.g. the editor's viewport texture -
-            // rather than always reporting the window's own size.
+            // Cache the current render output size once per frame instead of
+            // querying it on every draw call. Use SDL_GetCurrentRenderOutputSize
+            // rather than SDL_GetRenderOutputSize so the size reflects the active
+            // render target (for example, an editor viewport texture) instead of
+            // always returning the window size.
             int w = 0, h = 0;
             SDL_GetCurrentRenderOutputSize(m_Renderer, &w, &h);
             m_ScreenWidth = static_cast<float>(w);
             m_ScreenHeight = static_cast<float>(h);
+
+            auto colorUint8 = clearColor.ToUint8();
+            SDL_SetRenderDrawColor(m_Renderer, colorUint8.r, colorUint8.g,
+                            colorUint8.b, colorUint8.a);
+            SDL_RenderClear(m_Renderer);
+            InvokeImGuiBeginHook();
+
         }
 
-        void EndFrame() override { m_TextCache.Update(); }
+        void EndFrame() override
+        {
+            m_TextCache.Update();
+
+            InvokeImGuiHook(nullptr);
+            SDL_RenderPresent(m_Renderer);
+        }
 
         void DrawLine(const DrawCmd::Line& l) override
         {

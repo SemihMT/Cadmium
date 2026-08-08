@@ -12,8 +12,8 @@ namespace Cadmium
   class LayerStack
   {
   public:
-    void PushLayer(std::unique_ptr<Layer> layer, IEngineContext* context);
-    void PushOverlay(std::unique_ptr<Layer> layer, IEngineContext* context);
+    void PushLayer(std::unique_ptr<Cadmium::Layer> layer, IEngineContext* context);
+    void PushOverlay(std::unique_ptr<Cadmium::Layer> layer, IEngineContext* context);
     void PopLayer(const std::string& name);
     void PopOverlay(const std::string& name);
     void Clear();

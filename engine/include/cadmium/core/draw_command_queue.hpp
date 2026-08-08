@@ -2,15 +2,31 @@
 #define CADMIUM_DRAW_COMNMAND_QUEUE
 #include <glm/ext/vector_float2.hpp>
 #include <cadmium/core/handles.hpp>
+#include <cstdint>
 #include <string>
 #include <variant>
 #include <vector>
 
 namespace Cadmium
 {
+    
+    struct ColorUint8
+    {
+        uint8_t r = 255, g = 255, b = 255, a = 255;
+    };
+
     struct Color
     {
         float r = 1.f, g = 1.f, b = 1.f, a = 1.f;
+
+        ColorUint8 ToUint8() const
+        {
+            return {
+                static_cast<uint8_t>(r * 255.f),
+                static_cast<uint8_t>(g * 255.f),
+                static_cast<uint8_t>(b * 255.f),
+                static_cast<uint8_t>(a * 255.f)};
+        }
 
         static Color White() { return {1, 1, 1, 1}; }
         static Color Black() { return {0, 0, 0, 1}; }

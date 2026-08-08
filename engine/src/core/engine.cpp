@@ -46,7 +46,7 @@ namespace Cadmium
             m_TextCache.Init(m_Renderer, AssetPath("assets/fonts/JetBrainsMono-Regular.ttf"), 96.0f);
             m_RenderBackend = std::make_unique<SDLRenderer>(m_Renderer, m_TextCache);
             m_AssetManager.Init(*m_RenderBackend);
-            m_ImGuiLayer.Init(m_Window, m_Renderer);
+            m_ImGuiLayer.InitForSDLRenderer(m_Window, m_Renderer, *m_RenderBackend);
             m_RendererReady = true;
         }
         else
@@ -57,9 +57,20 @@ namespace Cadmium
                 {
                     m_RendererReady = ok;
                     if (!ok)
+                    {
                         Cadmium::Log::Error("Engine", "WebGPU device negotiation failed");
-                    else
-                        m_AssetManager.Init(*m_RenderBackend);
+                        return;
+                    }
+                    m_AssetManager.Init(*m_RenderBackend);
+
+                    WebGPURenderer& gpu = static_cast<WebGPURenderer&>(*m_RenderBackend);
+                    gpu.CreateFlatColorPipeline();
+                    m_ImGuiLayer.InitForWebGPU(m_Window, gpu.GetDevice(), gpu.GetSurfaceFormat(), *m_RenderBackend);
+                    if (m_PendingViewportEnable)
+                    {
+                        m_PendingViewportEnable = false;
+                        EnableViewport(m_PendingViewportW,m_PendingViewportH);
+                    }
                 });
             m_RenderBackend = std::move(webgpu);
         }
@@ -77,19 +88,16 @@ namespace Cadmium
 
     Engine::~Engine()
     {
-        if(m_Backend == RendererBackend::SDL2D)
+        m_ImGuiLayer.Shutdown();
+
+        if (m_Backend == RendererBackend::SDL2D)
         {
-            m_ImGuiLayer.Shutdown();
             SDL_DestroyRenderer(m_Renderer);
-            SDL_DestroyWindow(m_Window);
-            SDL_Quit();
             TTF_Quit();
         }
 
-        if(m_Backend == RendererBackend::WebGPU)
-        {
-
-        }
+        SDL_DestroyWindow(m_Window);
+        SDL_Quit();
     }
 
     void Engine::Run()
@@ -136,8 +144,7 @@ namespace Cadmium
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
-            // TODO: make imgui init adapt to chosen renderer
-            //m_ImGuiLayer.ProcessEvent(event);
+            m_ImGuiLayer.ProcessEvent(event);
             if (event.type == SDL_EVENT_QUIT)
             {
                 RequestQuit();
@@ -186,72 +193,52 @@ namespace Cadmium
         for (auto& layer : layerStack)
             layer->OnUpdate(dt);
 
-        auto toUint8 = [](float channel)
-        {
-            channel = std::clamp(channel, 0.0f, 1.0f);
-            return static_cast<Uint8>(channel * 255.0f);
-        };
-
-        SDL_SetRenderDrawColor(m_Renderer,
-                               toUint8(m_ClearColor.r),
-                               toUint8(m_ClearColor.g),
-                               toUint8(m_ClearColor.b),
-                               toUint8(m_ClearColor.a));
+        m_RenderBackend->BeginFrame(m_ClearColor);
 
         if (m_UseViewport && m_Viewport.IsReady())
-        {
-            if (!m_Viewport.Bind())
-                m_UseViewport = false;
-        }
-        m_RenderBackend->BeginFrame();
+            m_Viewport.Bind();
 
-        SDL_RenderClear(m_Renderer);
+       if (m_UseDefaultBackground)
+           m_RenderBackend->DrawFullscreenTexture(m_DefaultBackgroundHandle);
 
-        if (m_UseDefaultBackground)
-        {
-            m_RenderBackend->DrawFullscreenTexture(m_DefaultBackgroundHandle);
-        }
-
-        for (auto& layer : layerStack)
-            layer->OnRender(m_Renderer);
-
-        for (auto& layer : m_GlobalLayers)
-            layer->OnRender(m_Renderer);
-
-        m_RenderBackend->EndFrame();
+       for (auto& layer : layerStack)
+           layer->OnRender(m_Renderer);
+       for (auto& layer : m_GlobalLayers)
+           layer->OnRender(m_Renderer);
 
         if (m_UseViewport && m_Viewport.IsReady())
-            m_Viewport.Unbind();
+           m_Viewport.Unbind();
 
-        // m_ImGuiLayer.Begin();
-        // for (auto& layer : m_GlobalLayers)
-        //     layer->OnImGuiRender();
-        // for (auto& layer : layerStack)
-        //     layer->OnImGuiRender();
-        // m_ImGuiLayer.End(m_Renderer);
+       for (auto& layer : m_GlobalLayers)
+           layer->OnImGuiRender();
+       for (auto& layer : layerStack)
+           layer->OnImGuiRender();
 
-        SDL_RenderPresent(m_Renderer);
-        eventBus.Dispatch();
-        layerStack.FlushPending(this);
-        m_GlobalLayers.FlushPending(this);
-        m_SceneManager.FlushPending(this);
+       m_RenderBackend->EndFrame();
 
-        if (m_TargetFrameNS > 0)
-        {
-            Uint64 now = SDL_GetPerformanceCounter();
-            Uint64 elapsed = now - frameStart;
 
-            Uint64 targetTicks = (m_TargetFrameNS * m_Frequency) / 1'000'000'000ULL;
 
-            if (elapsed < targetTicks)
-            {
-                Uint64 remaining = targetTicks - elapsed;
+       eventBus.Dispatch();
+       layerStack.FlushPending(this);
+       m_GlobalLayers.FlushPending(this);
+       m_SceneManager.FlushPending(this);
 
-                Uint32 delayMS = static_cast<Uint32>((remaining * 1000) / m_Frequency);
+       if (m_TargetFrameNS > 0)
+       {
+           Uint64 now = SDL_GetPerformanceCounter();
+           Uint64 elapsed = now - frameStart;
 
-                if (delayMS > 0)
-                    SDL_Delay(delayMS);
-            }
+           Uint64 targetTicks = (m_TargetFrameNS * m_Frequency) / 1'000'000'000ULL;
+
+           if (elapsed < targetTicks)
+           {
+               Uint64 remaining = targetTicks - elapsed;
+
+               Uint32 delayMS = static_cast<Uint32>((remaining * 1000) / m_Frequency);
+
+               if (delayMS > 0)
+                   SDL_Delay(delayMS);
+           }
         }
 #ifdef CADMIUM_PLATFORM_WEB
         if (!m_Running)
@@ -288,7 +275,18 @@ namespace Cadmium
     }
     void Engine::EnableViewport(int w, int h)
     {
-        m_UseViewport = m_Viewport.Init(m_Renderer, w, h);
+        if (m_Backend == RendererBackend::WebGPU && !m_RendererReady)
+        {
+            m_PendingViewportEnable = true;
+            m_PendingViewportW = w;
+            m_PendingViewportH = h;
+            return;
+        }
+
+        bool ok = (m_Backend == RendererBackend::SDL2D)
+            ? m_Viewport.InitSDL(m_Renderer, w, h)
+            : m_Viewport.InitWebGPU(static_cast<WebGPURenderer&>(*m_RenderBackend), w, h);
+        m_UseViewport = ok;
     }
     void Engine::ResizeViewport(int w, int h)
     {
@@ -296,11 +294,14 @@ namespace Cadmium
     }
     void Engine::DisableViewport()
     {
+        m_PendingViewportEnable = false;
+        if (m_Backend == RendererBackend::WebGPU)
+            static_cast<WebGPURenderer&>(*m_RenderBackend).ClearViewportRenderTarget();
         m_UseViewport = false;
     }
     SDL_Texture* Engine::GetRenderTarget()
     {
-        return m_UseViewport ? m_Viewport.GetTexture() : nullptr;
+        return m_UseViewport ? m_Viewport.GetSDLTexture() : nullptr;
     }
     Editor::RenderViewport& Engine::GetViewport()
     {
@@ -314,7 +315,7 @@ namespace Cadmium
     {
         m_TargetFrameNS = (fps > 0) ? static_cast<Uint64>(1e9 / fps) : 0ULL;
     }
-    void Engine::PushGlobalOverlay(std::unique_ptr<Layer> layer)
+    void Engine::PushGlobalOverlay(std::unique_ptr<Cadmium::Layer> layer)
     {
         m_GlobalLayers.PushOverlay(std::move(layer), this);
     }

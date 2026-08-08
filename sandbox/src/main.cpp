@@ -11,7 +11,7 @@ int main()
   try
   {
     Cadmium::Engine engine("Cadmium - Asteroids", 1280, 720, Cadmium::RendererBackend::WebGPU);
-    //engine.PushGlobalOverlay(std::make_unique<Cadmium::Editor::EditorOverlayLayer>(engine.GetAssets(), engine.GetRenderer(),&engine));
+    engine.PushGlobalOverlay(std::make_unique<Cadmium::Editor::EditorOverlayLayer>(engine.GetAssets(), engine.GetRenderer(),&engine));
     engine.DisableDefaultBackground();
     engine.SetTargetFPS(60);
     engine.PushScene(std::make_unique<Cadmium::Scene>("Test"));

@@ -3,6 +3,7 @@
 
 #include <cadmium/core/draw_command_queue.hpp>
 #include <cadmium/core/handles.hpp>
+#include <functional>
 #include <string>
 
 namespace Cadmium
@@ -18,7 +19,7 @@ namespace Cadmium
       public:
         virtual ~IRenderer() = default;
 
-        virtual void BeginFrame() = 0;
+        virtual void BeginFrame(Cadmium::Color clearColor) = 0;
         virtual void EndFrame() = 0;
 
         virtual void DrawLine(const DrawCmd::Line&) = 0;
@@ -48,6 +49,17 @@ namespace Cadmium
         // WebGPU:       ImTextureID = WGPUTextureView             (see ImGui_ImplWGPU_RenderDrawData()         in imgui_impl_wgpu.cpp)
         // from: https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
         virtual void* GetNativeTextureHandle(TextureHandle handle) const { return nullptr; }
+
+        void SetImGuiBeginHook(std::function<void()> hook) {m_ImGuiBeginHook = std::move(hook);}
+        void SetImGuiRenderHook(std::function<void(void*)> hook) { m_ImGuiRenderHook = std::move(hook); }
+
+        protected:
+        void InvokeImGuiBeginHook() { if (m_ImGuiBeginHook) m_ImGuiBeginHook(); }
+        void InvokeImGuiHook(void* backendHandle) { if (m_ImGuiRenderHook) m_ImGuiRenderHook(backendHandle); }
+
+        private:
+        std::function<void()> m_ImGuiBeginHook;
+        std::function<void(void*)> m_ImGuiRenderHook;
     };
 
     template <typename Cmd> void DispatchDrawCommand(IRenderer& renderer, const Cmd& cmd)

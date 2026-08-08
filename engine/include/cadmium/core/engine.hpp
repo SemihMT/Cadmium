@@ -98,13 +98,16 @@ namespace Cadmium
 
     RendererBackend m_Backend;
     bool m_RendererReady{false};
+    bool m_PendingViewportEnable{false};
+    int m_PendingViewportW{0};
+    int m_PendingViewportH{0};
     int m_Width{0};
     int m_Height{0};
     bool m_Running{true};
     bool m_UseViewport{false};
     bool m_UseDefaultBackground{true};
 
-    Cadmium::Color m_ClearColor{0.0f, 0.0f, 0.0f, 1.0f};
+    Cadmium::Color m_ClearColor{0.3f, 0.3f, 0.7f, 1.0f};
 
     float m_FixedTimestep{1.0f / 60.0f};
     float m_Accumulator{0.0f};
