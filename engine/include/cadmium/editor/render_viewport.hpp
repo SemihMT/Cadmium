@@ -3,6 +3,7 @@
 
 #include "cadmium/render/webgpu_renderer.hpp"
 #include "imgui.h"
+#include "webgpu/webgpu.h"
 #include <SDL3/SDL.h>
 #include <cadmium/core/logger.hpp>
 #include <imgui_impl_wgpu.h>
@@ -23,7 +24,12 @@ namespace Cadmium::Editor
     {
       public:
         RenderViewport() = default;
-        ~RenderViewport() { DestroyWebGPU(); }
+        ~RenderViewport()
+        {
+            if (m_WebGPURenderer)
+                m_WebGPURenderer->ClearViewportRenderTarget();
+            DestroyWebGPU();
+        }
 
         RenderViewport(RenderViewport&&) noexcept = delete;
         RenderViewport& operator=(RenderViewport&&) noexcept = delete;
@@ -118,6 +124,7 @@ namespace Cadmium::Editor
                 return true;
 
             DestroyWebGPU();
+            m_WebGPURenderer->ClearViewportRenderTarget();
 
             WGPUTextureDescriptor desc{};
             desc.size = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
@@ -143,6 +150,7 @@ namespace Cadmium::Editor
             viewDesc.dimension = WGPUTextureViewDimension_2D;
             viewDesc.mipLevelCount = 1;
             viewDesc.arrayLayerCount = 1;
+            viewDesc.aspect = WGPUTextureAspect_All;
             m_WgpuView = wgpuTextureCreateView(m_WgpuTexture, &viewDesc);
 
             if (!m_WgpuView)
@@ -200,7 +208,13 @@ namespace Cadmium::Editor
 
         SDL_Texture* GetSDLTexture() const { return m_Texture.get(); }
         WGPUTextureView GetWebGPUTextureView() const { return m_WgpuView; }
-        void* GetImTextureID() const { return static_cast<void*>(m_Texture.get()); }
+        ImTextureID  GetImTextureID() const
+        {
+            if (m_WgpuView)
+                return reinterpret_cast<ImTextureID>(m_WgpuView);
+
+            return reinterpret_cast<ImTextureID>(m_Texture.get());
+        }
         ImTextureID GetWebGPUImTextureID() const
         {
             return reinterpret_cast<ImTextureID>(m_WgpuView);
