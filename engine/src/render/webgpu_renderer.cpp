@@ -405,8 +405,18 @@ namespace Cadmium
     }
     void WebGPURenderer::DrawText(const DrawCmd::Text&) {}
     void WebGPURenderer::DrawSprite(const DrawCmd::Sprite&) {}
-    void WebGPURenderer::SetCamera(const DrawCmd::SetCamera&) {}
-    void WebGPURenderer::ResetCamera(const DrawCmd::ResetCamera&) {}
+    void WebGPURenderer::SetCamera(const DrawCmd::SetCamera& cmd)
+    {
+        m_CamX = cmd.x;
+        m_CamY = cmd.y;
+        m_CamZoom = cmd.zoom;
+    }
+    void WebGPURenderer::ResetCamera(const DrawCmd::ResetCamera&)
+    {
+        m_CamX = 0.0f;
+        m_CamY = 0.0f;
+        m_CamZoom = 1.0f;
+    }
     void WebGPURenderer::DrawFullscreenTexture(TextureHandle) {}
 
     void WebGPURenderer::CreateFlatColorPipeline()
