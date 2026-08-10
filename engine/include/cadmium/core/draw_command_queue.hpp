@@ -9,7 +9,7 @@
 
 namespace Cadmium
 {
-    
+
     struct ColorUint8
     {
         uint8_t r = 255, g = 255, b = 255, a = 255;
@@ -95,6 +95,8 @@ namespace Cadmium
             Color color;    // tint
             bool flipX = false;
             bool flipY = false;
+            // Non-zero srcW/srcH lets one texture act as an atlas.
+            float srcX = 0.f, srcY = 0.f, srcW = 0.f, srcH = 0.f;
         };
         struct SetCamera
         {

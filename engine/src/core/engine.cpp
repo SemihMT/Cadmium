@@ -65,6 +65,7 @@ namespace Cadmium
 
                     WebGPURenderer& gpu = static_cast<WebGPURenderer&>(*m_RenderBackend);
                     gpu.CreateFlatColorPipeline();
+                    gpu.CreateTexturedPipeline();
                     m_ImGuiLayer.InitForWebGPU(m_Window, gpu.GetDevice(), gpu.GetSurfaceFormat(), *m_RenderBackend);
                     if (m_PendingViewportEnable)
                     {
@@ -105,6 +106,7 @@ namespace Cadmium
         // Process any scenes pushed after engine init
         // but before Run() was called
         m_SceneManager.FlushPending(this);
+        m_Started = true;
 #ifdef CADMIUM_PLATFORM_WEB
         s_Instance = this;
         emscripten_set_main_loop(StaticIterate, 0, 1);
@@ -157,6 +159,7 @@ namespace Cadmium
             {
                 m_Width = event.window.data1;
                 m_Height = event.window.data2;
+                m_RenderBackend->Resize(m_Width, m_Height);
             }
 
             for (auto it = m_GlobalLayers.rbegin(); it != m_GlobalLayers.rend(); ++it)
@@ -193,10 +196,10 @@ namespace Cadmium
         for (auto& layer : layerStack)
             layer->OnUpdate(dt);
 
-        m_RenderBackend->BeginFrame(m_ClearColor);
-
         if (m_UseViewport && m_Viewport.IsReady())
             m_Viewport.Bind();
+
+        m_RenderBackend->BeginFrame(m_ClearColor);
 
        if (m_UseDefaultBackground)
            m_RenderBackend->DrawFullscreenTexture(m_DefaultBackgroundHandle);
@@ -351,6 +354,9 @@ namespace Cadmium
 
     void Engine::PushLayer(std::unique_ptr<Layer> layer)
     {
+        if (!m_Started)
+            m_SceneManager.FlushPending(this);
+
         Scene* scene = m_SceneManager.GetActiveScene();
         if (!scene)
             throw std::runtime_error("PushLayer called with no active scene");
@@ -359,6 +365,9 @@ namespace Cadmium
 
     void Engine::PushOverlay(std::unique_ptr<Layer> layer)
     {
+        if (!m_Started)
+            m_SceneManager.FlushPending(this);
+
         Scene* scene = m_SceneManager.GetActiveScene();
         if (!scene)
             throw std::runtime_error("PushOverlay called with no active scene");
@@ -367,6 +376,9 @@ namespace Cadmium
 
     void Engine::PopLayer(const std::string& name)
     {
+        if (!m_Started)
+            m_SceneManager.FlushPending(this);
+
         Scene* scene = m_SceneManager.GetActiveScene();
         if (!scene)
             throw std::runtime_error("PopLayer called with no active scene");
@@ -375,6 +387,9 @@ namespace Cadmium
 
     void Engine::PopOverlay(const std::string& name)
     {
+        if (!m_Started)
+            m_SceneManager.FlushPending(this);
+
         Scene* scene = m_SceneManager.GetActiveScene();
         if (!scene)
             throw std::runtime_error("PopOverlay called with no active scene");
@@ -383,6 +398,9 @@ namespace Cadmium
 
     EventBus& Engine::GetEventBus()
     {
+        if (!m_Started)
+            m_SceneManager.FlushPending(this);
+
         Scene* scene = m_SceneManager.GetActiveScene();
         if (!scene)
             throw std::runtime_error("GetEventBus called with no active scene");

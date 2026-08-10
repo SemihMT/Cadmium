@@ -163,9 +163,9 @@ namespace Cadmium::Editor
                 return false;
             }
 
-            m_WebGPURenderer->SetViewportRenderTarget(m_WgpuView);
             m_Width = width;
             m_Height = height;
+            m_WebGPURenderer->SetViewportRenderTarget(m_WgpuView, m_Width, m_Height);
             return true;
         }
 

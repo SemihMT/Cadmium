@@ -21,6 +21,7 @@ namespace Cadmium
 
         virtual void BeginFrame(Cadmium::Color clearColor) = 0;
         virtual void EndFrame() = 0;
+        virtual void Resize(int width, int height) {}
 
         virtual void DrawLine(const DrawCmd::Line&) = 0;
         virtual void DrawRect(const DrawCmd::Rect&) = 0;

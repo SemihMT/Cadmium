@@ -104,6 +104,7 @@ namespace Cadmium
     int m_Width{0};
     int m_Height{0};
     bool m_Running{true};
+    bool m_Started{false}; // true when the engine has started processing frames
     bool m_UseViewport{false};
     bool m_UseDefaultBackground{true};
 

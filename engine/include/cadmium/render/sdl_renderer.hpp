@@ -206,35 +206,35 @@ namespace Cadmium
         {
             auto it = m_Textures.find(s.textureHandle);
             if (it == m_Textures.end())
-                return; // invalid/unloaded handle - skip rather than crash
+                return;
 
             SDL_Texture* texture = it->second.texture;
             const TextureDesc& desc = it->second.desc;
 
-            float w = (s.w > 0.0f ? s.w : static_cast<float>(desc.width)) * m_CamZoom;
-            float h = (s.h > 0.0f ? s.h : static_cast<float>(desc.height)) * m_CamZoom;
+            bool hasSrcRect = s.srcW > 0.0f && s.srcH > 0.0f;
+            SDL_FRect srcRect{s.srcX, s.srcY, s.srcW, s.srcH};
+
+            float naturalW = hasSrcRect ? s.srcW : static_cast<float>(desc.width);
+            float naturalH = hasSrcRect ? s.srcH : static_cast<float>(desc.height);
+            float w = (s.w > 0.0f ? s.w : naturalW) * m_CamZoom;
+            float h = (s.h > 0.0f ? s.h : naturalH) * m_CamZoom;
 
             float sx, sy;
             ToScreen(s.x, s.y, sx, sy);
             SDL_FRect dst{sx - w * 0.5f, sy - h * 0.5f, w, h};
 
-            // SDL_FlipMode is a bitmask despite being an enum - both flags
-            // at once is a valid combination.
             int flip = SDL_FLIP_NONE;
             if (s.flipX)
                 flip |= SDL_FLIP_HORIZONTAL;
             if (s.flipY)
                 flip |= SDL_FLIP_VERTICAL;
 
-            // Color/alpha mod is state on the SDL_Texture itself, not
-            // per-draw-call - set fresh every time so one sprite's tint
-            // can't bleed into the next draw of the same texture.
             SDL_SetTextureColorModFloat(texture, s.color.r, s.color.g, s.color.b);
             SDL_SetTextureAlphaModFloat(texture, s.color.a);
 
             SDL_RenderTextureRotated(m_Renderer,
                                      texture,
-                                     nullptr,
+                                     hasSrcRect ? &srcRect : nullptr,
                                      &dst,
                                      s.rotation,
                                      nullptr,
