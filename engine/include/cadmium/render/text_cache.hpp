@@ -4,6 +4,7 @@
 #include "SDL3/SDL_error.h"
 #include "cadmium/core/handles.hpp"
 #include "cadmium/core/logger.hpp"
+#include "cadmium/render/renderer.hpp"
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
@@ -23,9 +24,9 @@ class TextCache {
 public:
     TextCache() = default;
 
-    void Init(SDL_Renderer* renderer, const std::string& defaultFontPath, float defaultPtSize = 32.0f)
+    void Init(IRenderer& renderer, const std::string& defaultFontPath, float defaultPtSize = 32.0f)
     {
-        m_Renderer = renderer;
+        m_Renderer = &renderer;
         m_DefaultFont = LoadFontInternal(defaultFontPath, defaultPtSize);
         if (m_DefaultFont == k_InvalidFont) {
             throw std::runtime_error("Failed to load default font: " + defaultFontPath);
@@ -71,8 +72,7 @@ public:
         if (!entry || !entry->texture)
             return;
 
-        const SDL_FRect dst{x, y, entry->width, entry->height};
-        SDL_RenderTexture(m_Renderer, entry->texture, nullptr, &dst);
+        m_Renderer->DrawTexturedQuadScreen(entry->texture, x, y, entry->width, entry->height, Color::White());
     }
 
     // Layout-only measurement.
@@ -98,7 +98,7 @@ public:
 
         for (auto it = m_Cache.begin(); it != m_Cache.end();) {
             if (m_FrameCounter - it->second.lastUsedFrame > k_EvictAfterFrames) {
-                SDL_DestroyTexture(it->second.texture);
+                m_Renderer->DestroyTexture(it->second.texture);
                 it = m_Cache.erase(it);
             } else {
                 ++it;
@@ -107,8 +107,11 @@ public:
     }
 
     void Clear() {
-        for (auto& [key, entry] : m_Cache)
-            SDL_DestroyTexture(entry.texture);
+        if (m_Renderer)
+        {
+            for (auto& [key, entry] : m_Cache)
+                m_Renderer->DestroyTexture(entry.texture);
+        }
         m_Cache.clear();
 
         for (TTF_Font* font : m_Fonts) {
@@ -160,7 +163,7 @@ private:
     };
 
     struct Entry {
-        SDL_Texture* texture{nullptr};
+        TextureHandle texture{k_InvalidTexture};
         float width{0.f};
         float height{0.f};
         uint64_t lastUsedFrame{0};
@@ -177,7 +180,7 @@ private:
     }
 
     TTF_Font* Resolve(FontHandle handle) const {
-        return handle < m_Fonts.size() ? m_Fonts[handle] : nullptr;
+        return (handle != k_InvalidFont && handle <= m_Fonts.size()) ? m_Fonts[handle - 1] : nullptr;
     }
 
     const Entry* GetOrCreateTexture(FontHandle font,
@@ -197,7 +200,7 @@ private:
         }
 
         Entry rendered = Render(font, text, size, color);
-        if (!rendered.texture)
+        if (rendered.texture == k_InvalidTexture)
             return nullptr;
 
         rendered.lastUsedFrame = m_FrameCounter;
@@ -205,7 +208,7 @@ private:
         return &newIt->second;
     }
 
-    Entry Render(FontHandle fontHandle,
+Entry Render(FontHandle fontHandle,
                  const std::string& text,
                  float size,
                  const Color& color) {
@@ -220,20 +223,26 @@ private:
         if (!surface)
             return {};
 
-        SDL_Texture* texture = SDL_CreateTextureFromSurface(m_Renderer, surface);
-        Entry entry{texture,
-                    static_cast<float>(surface->w),
-                    static_cast<float>(surface->h),
-                    0 /* lastUsedFrame set by caller */};
+        SDL_Surface* converted = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
         SDL_DestroySurface(surface);
+        if (!converted)
+            return {};
+
+        TextureHandle texture = m_Renderer->CreateTextureFromMemory(
+            converted->w, converted->h, converted->pixels, converted->pitch);
+        Entry entry{texture,
+                    static_cast<float>(converted->w),
+                    static_cast<float>(converted->h),
+                    0 /* lastUsedFrame set by caller */};
+        SDL_DestroySurface(converted);
         return entry;
     }
 
-    FontHandle m_DefaultFont;
-    std::vector<TTF_Font*> m_Fonts;                     // index == FontHandle
+    FontHandle m_DefaultFont{k_InvalidFont};
+    std::vector<TTF_Font*> m_Fonts;                     // index == FontHandle-1
     std::unordered_map<std::string, FontHandle> m_PathToFont;
 
-    SDL_Renderer* m_Renderer;
+    IRenderer* m_Renderer{nullptr};
     std::unordered_map<Key, Entry, KeyHash> m_Cache;
     uint64_t m_FrameCounter{0};
 

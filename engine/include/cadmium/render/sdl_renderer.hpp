@@ -103,8 +103,7 @@ namespace Cadmium
 
             if (c.filled)
             {
-                // Triangle fan from the center - fine for a debug/gameplay
-                // circle, not a general geometry path.
+                // Triangle fan from the center
                 std::vector<SDL_Vertex> verts;
                 verts.reserve(segments + 2);
                 SDL_FColor col{c.color.r, c.color.g, c.color.b, c.color.a};
@@ -162,7 +161,7 @@ namespace Cadmium
 
             if (p.filled)
             {
-                // Fan triangulation from vertex 0 - correct for convex
+                // Fan triangulation from vertex 0. correct for convex
                 // polygons only. Concave shapes will render wrong.
                 std::vector<SDL_Vertex> verts;
                 verts.reserve(screen.size());
@@ -277,6 +276,32 @@ namespace Cadmium
             return handle;
         }
 
+         TextureHandle CreateTextureFromMemory(int width, int height, const void* pixelsRGBA8, int rowBytes) override
+        {
+            if (width <= 0 || height <= 0 || !pixelsRGBA8)
+                return k_InvalidTexture;
+
+            SDL_Surface* surface = SDL_CreateSurfaceFrom(width,
+                                                          height,
+                                                          SDL_PIXELFORMAT_RGBA32,
+                                                          const_cast<void*>(pixelsRGBA8),
+                                                          rowBytes > 0 ? rowBytes : width * 4);
+            if (!surface)
+                return k_InvalidTexture;
+
+            // SDL_CreateTextureFromSurface copies the pixel data into the
+            // texture, so the surface (and the caller's buffer it wraps) is
+            // safe to free/discard immediately after this call.
+            SDL_Texture* texture = SDL_CreateTextureFromSurface(m_Renderer, surface);
+            SDL_DestroySurface(surface);
+            if (!texture)
+                return k_InvalidTexture;
+
+            TextureHandle handle = m_NextHandle++;
+            m_Textures[handle] = {texture, {width, height}};
+            return handle;
+        }
+
         TextureDesc GetTextureDesc(TextureHandle handle) const override
         {
             auto it = m_Textures.find(handle);
@@ -290,6 +315,21 @@ namespace Cadmium
                 return;
             SDL_DestroyTexture(it->second.texture);
             m_Textures.erase(it);
+        }
+
+         void DrawTexturedQuadScreen(
+            TextureHandle handle, float screenX, float screenY, float width, float height, const Color& tint) override
+        {
+            auto it = m_Textures.find(handle);
+            if (it == m_Textures.end())
+                return;
+
+            SDL_Texture* texture = it->second.texture;
+            SDL_SetTextureColorModFloat(texture, tint.r, tint.g, tint.b);
+            SDL_SetTextureAlphaModFloat(texture, tint.a);
+
+            SDL_FRect dst{screenX, screenY, width, height};
+            SDL_RenderTexture(m_Renderer, texture, nullptr, &dst);
         }
 
         void* GetNativeTextureHandle(TextureHandle handle) const override

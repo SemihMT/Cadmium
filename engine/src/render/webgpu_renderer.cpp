@@ -88,8 +88,8 @@ fn fs_main(in: VertexOut) -> @location(0) vec4f {
 
 namespace Cadmium
 {
-    WebGPURenderer::WebGPURenderer(SDL_Window* window, int width, int height)
-        : m_Window{window}, m_Width(width), m_Height(height)
+    WebGPURenderer::WebGPURenderer(SDL_Window* window, int width, int height, TextCache& textCache)
+        : m_Window{window}, m_Width(width), m_Height(height), m_TextCache(textCache)
     {
         SDL_GetWindowSizeInPixels(m_Window, &m_Width, &m_Height);
 #ifdef CADMIUM_PLATFORM_WEB
@@ -453,7 +453,12 @@ namespace Cadmium
         }
         EndFlatRun();
     }
-    void WebGPURenderer::DrawText(const DrawCmd::Text&) {}
+    void WebGPURenderer::DrawText(const DrawCmd::Text& t)
+    {
+        float sx, sy;
+        ToScreen(t.x, t.y, sx, sy);
+        m_TextCache.Draw(t.font, t.str, sx, sy, t.size, t.color);
+    }
     void WebGPURenderer::DrawSprite(const DrawCmd::Sprite& s)
     {
         auto it = m_Textures.find(s.textureHandle);
@@ -525,6 +530,25 @@ namespace Cadmium
 
         m_DrawRuns.back().vertexCount += 6;
     }
+    void WebGPURenderer::DrawTexturedQuadScreen(
+        TextureHandle handle, float screenX, float screenY, float width, float height, const Color& tint)
+    {
+        auto it = m_Textures.find(handle);
+        if (it == m_Textures.end())
+            return;
+
+        float x0 = screenX, y0 = screenY;
+        float x1 = screenX + width, y1 = screenY + height;
+
+        if (m_DrawRuns.empty() || m_DrawRuns.back().kind != BatchKind::Textured ||
+            m_DrawRuns.back().textureHandle != handle)
+            m_DrawRuns.push_back(
+                {BatchKind::Textured, static_cast<uint32_t>(m_TexturedBatchVertices.size()), 0, handle});
+
+        PushTexturedQuad(x0, y0, 0.f, 0.f, x1, y0, 1.f, 0.f, x1, y1, 1.f, 1.f, x0, y1, 0.f, 1.f, tint);
+
+        m_DrawRuns.back().vertexCount += 6;
+    }
     void WebGPURenderer::DrawFullscreenTexture(TextureHandle handle)
     {
         auto it = m_Textures.find(handle);
@@ -577,9 +601,27 @@ namespace Cadmium
             return k_InvalidTexture;
         }
 
+        TextureHandle handle = UploadRGBA8Texture(
+            surface->w, surface->h, surface->pixels, static_cast<size_t>(surface->pitch));
+
+        SDL_DestroySurface(surface);
+        return handle;
+    }
+
+    TextureHandle WebGPURenderer::CreateTextureFromMemory(int width, int height, const void* pixelsRGBA8, int rowBytes)
+    {
+        if (width <= 0 || height <= 0 || !pixelsRGBA8)
+            return k_InvalidTexture;
+
+        size_t stride = rowBytes > 0 ? static_cast<size_t>(rowBytes) : static_cast<size_t>(width) * 4;
+        return UploadRGBA8Texture(width, height, pixelsRGBA8, stride);
+    }
+
+    TextureHandle WebGPURenderer::UploadRGBA8Texture(int width, int height, const void* pixels, size_t rowBytes)
+    {
         WGPUTextureDescriptor texDesc{};
         texDesc.dimension = WGPUTextureDimension_2D;
-        texDesc.size = {static_cast<uint32_t>(surface->w), static_cast<uint32_t>(surface->h), 1};
+        texDesc.size = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
         texDesc.format = WGPUTextureFormat_RGBA8Unorm;
         texDesc.usage = WGPUTextureUsage_TextureBinding | WGPUTextureUsage_CopyDst;
         texDesc.mipLevelCount = 1;
@@ -594,17 +636,11 @@ namespace Cadmium
 
         WGPUTexelCopyBufferLayout layout{};
         layout.offset = 0;
-        layout.bytesPerRow = static_cast<uint32_t>(surface->pitch);
-        layout.rowsPerImage = static_cast<uint32_t>(surface->h);
+        layout.bytesPerRow = static_cast<uint32_t>(rowBytes);
+        layout.rowsPerImage = static_cast<uint32_t>(height);
 
-        WGPUExtent3D extent{
-            static_cast<uint32_t>(surface->w), static_cast<uint32_t>(surface->h), 1};
-        wgpuQueueWriteTexture(m_Queue,
-                              &dst,
-                              surface->pixels,
-                              static_cast<size_t>(surface->pitch) * surface->h,
-                              &layout,
-                              &extent);
+        WGPUExtent3D extent{static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
+        wgpuQueueWriteTexture(m_Queue, &dst, pixels, rowBytes * static_cast<size_t>(height), &layout, &extent);
 
         WGPUTextureViewDescriptor viewDesc{};
         viewDesc.format = WGPUTextureFormat_RGBA8Unorm;
@@ -627,9 +663,7 @@ namespace Cadmium
         WGPUBindGroup bindGroup = wgpuDeviceCreateBindGroup(m_Device, &bgDesc);
 
         TextureHandle handle = m_NextHandle++;
-        m_Textures[handle] = {texture, view, bindGroup, {surface->w, surface->h}};
-
-        SDL_DestroySurface(surface);
+        m_Textures[handle] = {texture, view, bindGroup, {width, height}};
         return handle;
     }
     TextureDesc WebGPURenderer::GetTextureDesc(TextureHandle handle) const

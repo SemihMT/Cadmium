@@ -1,6 +1,7 @@
 #ifndef CADMIUM_WEBGPU_RENDERER_HPP
 #define CADMIUM_WEBGPU_RENDERER_HPP
 
+#include "cadmium/render/text_cache.hpp"
 #include <SDL3/SDL.h>
 
 #include <cadmium/core/draw_command_queue.hpp>
@@ -19,7 +20,7 @@ namespace Cadmium
     class WebGPURenderer : public IRenderer
     {
       public:
-        WebGPURenderer(SDL_Window* window, int width, int height);
+        WebGPURenderer(SDL_Window* window, int width, int height, TextCache& textCache);
         ~WebGPURenderer() override;
 
         WebGPURenderer(const WebGPURenderer&) = delete;
@@ -62,8 +63,14 @@ namespace Cadmium
         // -------------------------------------------------------------------------
 
         TextureHandle CreateTextureFromFile(const std::string&) override;
+        TextureHandle CreateTextureFromMemory(int width,
+                                              int height,
+                                              const void* pixelsRGBA8,
+                                              int rowBytes) override;
         TextureDesc GetTextureDesc(TextureHandle) const override;
         void DestroyTexture(TextureHandle) override;
+        void DrawTexturedQuadScreen(
+            TextureHandle handle, float screenX, float screenY, float width, float height, const Color& tint) override;
         void* GetNativeTextureHandle(TextureHandle handle) const override;
 
         // -------------------------------------------------------------------------
@@ -171,6 +178,9 @@ namespace Cadmium
         void EndFlatRun();
         void FlushDrawRuns(WGPURenderPassEncoder pass);
 
+        TextureHandle
+        UploadRGBA8Texture(int width, int height, const void* pixels, size_t rowBytes);
+
         // -------------------------------------------------------------------------
         // Window / frame state
         // -------------------------------------------------------------------------
@@ -193,6 +203,12 @@ namespace Cadmium
         Cadmium::Color m_ClearColor;
 
         std::function<void(bool)> m_OnReady;
+
+        // -------------------------------------------------------------------------
+        // Text
+        // -------------------------------------------------------------------------
+
+        TextCache& m_TextCache;
 
         // -------------------------------------------------------------------------
         // Camera state

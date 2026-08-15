@@ -35,8 +35,13 @@ namespace Cadmium
 
         // Texture lifecycle
         virtual TextureHandle CreateTextureFromFile(const std::string& path) = 0;
+        virtual TextureHandle CreateTextureFromMemory(
+            int width, int height, const void* pixelsRGBA8, int rowBytes = 0) = 0;
         virtual TextureDesc GetTextureDesc(TextureHandle) const = 0;
         virtual void DestroyTexture(TextureHandle) = 0;
+        //Used by TextCache to blit its cached textures.
+        virtual void DrawTexturedQuadScreen(
+            TextureHandle handle, float screenX, float screenY, float width, float height, const Color& tint) = 0;
 
         // Editor Only
         // Renderer defined implementation. Should return a pointer to something that represents a texture in the used backend.

@@ -35,7 +35,6 @@ namespace Cadmium
 
         if (m_Backend == RendererBackend::SDL2D)
         {
-
             m_Renderer = SDL_CreateRenderer(m_Window, nullptr);
             if (!m_Renderer)
                 throw std::runtime_error(SDL_GetError());
@@ -43,15 +42,15 @@ namespace Cadmium
             if (!TTF_Init())
                 throw std::runtime_error(SDL_GetError());
 
-            m_TextCache.Init(m_Renderer, AssetPath("assets/fonts/JetBrainsMono-Regular.ttf"), 96.0f);
             m_RenderBackend = std::make_unique<SDLRenderer>(m_Renderer, m_TextCache);
+            m_TextCache.Init(*m_RenderBackend, AssetPath("assets/fonts/JetBrainsMono-Regular.ttf"), 96.0f);
             m_AssetManager.Init(*m_RenderBackend);
             m_ImGuiLayer.InitForSDLRenderer(m_Window, m_Renderer, *m_RenderBackend);
             m_RendererReady = true;
         }
         else
         {
-            auto webgpu = std::make_unique<WebGPURenderer>(m_Window, m_Width, m_Height);
+            auto webgpu = std::make_unique<WebGPURenderer>(m_Window, m_Width, m_Height, m_TextCache);
             webgpu->RequestDevice(
                 [this](bool ok)
                 {
@@ -66,6 +65,18 @@ namespace Cadmium
                     WebGPURenderer& gpu = static_cast<WebGPURenderer&>(*m_RenderBackend);
                     gpu.CreateFlatColorPipeline();
                     gpu.CreateTexturedPipeline();
+
+                    if (!TTF_Init())
+                    {
+                        Cadmium::Log::Error("Engine", "TTF_Init failed: {}", SDL_GetError());
+                        m_RendererReady = false;
+                        return;
+                    }
+
+                    m_TextCache.Init(*m_RenderBackend,
+                                     AssetPath("assets/fonts/JetBrainsMono-Regular.ttf"),
+                                     96.0f);
+
                     m_ImGuiLayer.InitForWebGPU(m_Window, gpu.GetDevice(), gpu.GetSurfaceFormat(), *m_RenderBackend);
                     if (m_PendingViewportEnable)
                     {
