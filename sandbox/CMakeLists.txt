@@ -21,6 +21,9 @@ target_link_libraries(cadmium-sandbox PRIVATE
 )
 
 copy_sdl_to_output(cadmium-sandbox)
+if(NOT EMSCRIPTEN)
+    target_copy_webgpu_binaries(cadmium-sandbox)
+endif()
 copy_assets_tracked(${CMAKE_SOURCE_DIR}/engine/assets  cadmium-sandbox engine)
 copy_assets_tracked(${CMAKE_SOURCE_DIR}/sandbox/assets cadmium-sandbox sandbox)
 

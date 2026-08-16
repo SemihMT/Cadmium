@@ -40,20 +40,33 @@ namespace Cadmium
         // they migrate to IRenderer; once nothing calls this, delete it.
         SDL_Renderer* GetNativeHandle() const { return m_Renderer; }
 
-        void BeginFrame() override
+        void BeginFrame(Cadmium::Color clearColor) override
         {
-            // Cached once per frame rather than re-queried per draw call.
-            // SDL_GetCurrentRenderOutputSize (not the plain
-            // SDL_GetRenderOutputSize) so this stays correct if a render
-            // target is active - e.g. the editor's viewport texture -
-            // rather than always reporting the window's own size.
+            // Cache the current render output size once per frame instead of
+            // querying it on every draw call. Use SDL_GetCurrentRenderOutputSize
+            // rather than SDL_GetRenderOutputSize so the size reflects the active
+            // render target (for example, an editor viewport texture) instead of
+            // always returning the window size.
             int w = 0, h = 0;
             SDL_GetCurrentRenderOutputSize(m_Renderer, &w, &h);
             m_ScreenWidth = static_cast<float>(w);
             m_ScreenHeight = static_cast<float>(h);
+
+            auto colorUint8 = clearColor.ToUint8();
+            SDL_SetRenderDrawColor(m_Renderer, colorUint8.r, colorUint8.g,
+                            colorUint8.b, colorUint8.a);
+            SDL_RenderClear(m_Renderer);
+            InvokeImGuiBeginHook();
+
         }
 
-        void EndFrame() override { m_TextCache.Update(); }
+        void EndFrame() override
+        {
+            m_TextCache.Update();
+
+            InvokeImGuiHook(nullptr);
+            SDL_RenderPresent(m_Renderer);
+        }
 
         void DrawLine(const DrawCmd::Line& l) override
         {
@@ -90,8 +103,7 @@ namespace Cadmium
 
             if (c.filled)
             {
-                // Triangle fan from the center - fine for a debug/gameplay
-                // circle, not a general geometry path.
+                // Triangle fan from the center
                 std::vector<SDL_Vertex> verts;
                 verts.reserve(segments + 2);
                 SDL_FColor col{c.color.r, c.color.g, c.color.b, c.color.a};
@@ -149,7 +161,7 @@ namespace Cadmium
 
             if (p.filled)
             {
-                // Fan triangulation from vertex 0 - correct for convex
+                // Fan triangulation from vertex 0. correct for convex
                 // polygons only. Concave shapes will render wrong.
                 std::vector<SDL_Vertex> verts;
                 verts.reserve(screen.size());
@@ -193,35 +205,35 @@ namespace Cadmium
         {
             auto it = m_Textures.find(s.textureHandle);
             if (it == m_Textures.end())
-                return; // invalid/unloaded handle - skip rather than crash
+                return;
 
             SDL_Texture* texture = it->second.texture;
             const TextureDesc& desc = it->second.desc;
 
-            float w = (s.w > 0.0f ? s.w : static_cast<float>(desc.width)) * m_CamZoom;
-            float h = (s.h > 0.0f ? s.h : static_cast<float>(desc.height)) * m_CamZoom;
+            bool hasSrcRect = s.srcW > 0.0f && s.srcH > 0.0f;
+            SDL_FRect srcRect{s.srcX, s.srcY, s.srcW, s.srcH};
+
+            float naturalW = hasSrcRect ? s.srcW : static_cast<float>(desc.width);
+            float naturalH = hasSrcRect ? s.srcH : static_cast<float>(desc.height);
+            float w = (s.w > 0.0f ? s.w : naturalW) * m_CamZoom;
+            float h = (s.h > 0.0f ? s.h : naturalH) * m_CamZoom;
 
             float sx, sy;
             ToScreen(s.x, s.y, sx, sy);
             SDL_FRect dst{sx - w * 0.5f, sy - h * 0.5f, w, h};
 
-            // SDL_FlipMode is a bitmask despite being an enum - both flags
-            // at once is a valid combination.
             int flip = SDL_FLIP_NONE;
             if (s.flipX)
                 flip |= SDL_FLIP_HORIZONTAL;
             if (s.flipY)
                 flip |= SDL_FLIP_VERTICAL;
 
-            // Color/alpha mod is state on the SDL_Texture itself, not
-            // per-draw-call - set fresh every time so one sprite's tint
-            // can't bleed into the next draw of the same texture.
             SDL_SetTextureColorModFloat(texture, s.color.r, s.color.g, s.color.b);
             SDL_SetTextureAlphaModFloat(texture, s.color.a);
 
             SDL_RenderTextureRotated(m_Renderer,
                                      texture,
-                                     nullptr,
+                                     hasSrcRect ? &srcRect : nullptr,
                                      &dst,
                                      s.rotation,
                                      nullptr,
@@ -264,6 +276,32 @@ namespace Cadmium
             return handle;
         }
 
+         TextureHandle CreateTextureFromMemory(int width, int height, const void* pixelsRGBA8, int rowBytes) override
+        {
+            if (width <= 0 || height <= 0 || !pixelsRGBA8)
+                return k_InvalidTexture;
+
+            SDL_Surface* surface = SDL_CreateSurfaceFrom(width,
+                                                          height,
+                                                          SDL_PIXELFORMAT_RGBA32,
+                                                          const_cast<void*>(pixelsRGBA8),
+                                                          rowBytes > 0 ? rowBytes : width * 4);
+            if (!surface)
+                return k_InvalidTexture;
+
+            // SDL_CreateTextureFromSurface copies the pixel data into the
+            // texture, so the surface (and the caller's buffer it wraps) is
+            // safe to free/discard immediately after this call.
+            SDL_Texture* texture = SDL_CreateTextureFromSurface(m_Renderer, surface);
+            SDL_DestroySurface(surface);
+            if (!texture)
+                return k_InvalidTexture;
+
+            TextureHandle handle = m_NextHandle++;
+            m_Textures[handle] = {texture, {width, height}};
+            return handle;
+        }
+
         TextureDesc GetTextureDesc(TextureHandle handle) const override
         {
             auto it = m_Textures.find(handle);
@@ -277,6 +315,21 @@ namespace Cadmium
                 return;
             SDL_DestroyTexture(it->second.texture);
             m_Textures.erase(it);
+        }
+
+         void DrawTexturedQuadScreen(
+            TextureHandle handle, float screenX, float screenY, float width, float height, const Color& tint) override
+        {
+            auto it = m_Textures.find(handle);
+            if (it == m_Textures.end())
+                return;
+
+            SDL_Texture* texture = it->second.texture;
+            SDL_SetTextureColorModFloat(texture, tint.r, tint.g, tint.b);
+            SDL_SetTextureAlphaModFloat(texture, tint.a);
+
+            SDL_FRect dst{screenX, screenY, width, height};
+            SDL_RenderTexture(m_Renderer, texture, nullptr, &dst);
         }
 
         void* GetNativeTextureHandle(TextureHandle handle) const override

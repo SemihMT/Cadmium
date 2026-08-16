@@ -1,8 +1,12 @@
 #ifndef CADMIUM_EDITOR_RENDER_VIEWPORT_HPP
 #define CADMIUM_EDITOR_RENDER_VIEWPORT_HPP
 
+#include "cadmium/render/webgpu_renderer.hpp"
+#include "imgui.h"
+#include "webgpu/webgpu.h"
 #include <SDL3/SDL.h>
 #include <cadmium/core/logger.hpp>
+#include <imgui_impl_wgpu.h>
 
 #include <memory>
 
@@ -20,31 +24,67 @@ namespace Cadmium::Editor
     {
       public:
         RenderViewport() = default;
-        ~RenderViewport() = default;
+        ~RenderViewport()
+        {
+            if (m_WebGPURenderer)
+                m_WebGPURenderer->ClearViewportRenderTarget();
+            DestroyWebGPU();
+        }
 
-        RenderViewport(RenderViewport&&) noexcept = default;
-        RenderViewport& operator=(RenderViewport&&) noexcept = default;
+        RenderViewport(RenderViewport&&) noexcept = delete;
+        RenderViewport& operator=(RenderViewport&&) noexcept = delete;
         RenderViewport(const RenderViewport&) = delete;
         RenderViewport& operator=(const RenderViewport&) = delete;
 
         // Call after SDL_Renderer is available.
         // width/height = initial size in pixels.
-        bool Init(SDL_Renderer* renderer, int width, int height)
+        bool InitSDL(SDL_Renderer* renderer, int width, int height)
         {
             SDL_assert(m_Renderer == nullptr);
             m_Renderer = renderer;
-            return Resize(width, height);
+            return ResizeSDL(width, height);
+        }
+        bool InitWebGPU(WebGPURenderer& renderer, int width, int height)
+        {
+            m_WebGPURenderer = &renderer;
+            return ResizeWebGPU(width, height);
         }
 
-        // Recreate the texture at a new size.
-        // Call when the viewport panel is resized.
         bool Resize(int width, int height)
+        {
+            if (m_Renderer)
+                return ResizeSDL(width, height);
+
+            if (m_WebGPURenderer)
+                return ResizeWebGPU(width, height);
+
+            return false;
+        }
+
+        bool Bind() const
+        {
+            if(m_Renderer)
+                return BindSDL();
+            if(m_WebGPURenderer)
+                return BindWebGPU();
+            return false;
+        }
+        bool Unbind() const
+        {
+            if(m_Renderer)
+                return UnbindSDL();
+            if(m_WebGPURenderer)
+                return UnbindWebGPU();
+            return false;
+        }
+
+        bool ResizeSDL(int width, int height)
         {
             if (width <= 0 || height <= 0)
                 return false;
             if (!m_Renderer)
             {
-                Log::Warn("RenderViewport","Resize called without a renderer.");
+                Log::Warn("RenderViewport", "Resize called without a renderer.");
                 return false;
             }
 
@@ -58,7 +98,8 @@ namespace Cadmium::Editor
 
             if (!newTex)
             {
-                Log::Error("[RenderViewport]", "Failed to create render target: {}", SDL_GetError());
+                Log::Error(
+                    "[RenderViewport]", "Failed to create render target: {}", SDL_GetError());
                 m_Width = 0;
                 m_Height = 0;
                 return false;
@@ -69,35 +110,115 @@ namespace Cadmium::Editor
             m_Height = height;
             return true;
         }
-
-        // Redirect SDL rendering to this texture.
-        bool Bind() const
+        bool ResizeWebGPU(int width, int height)
         {
-            SDL_assert(m_Renderer);
-            if (!m_Texture)
+            if (width <= 0 || height <= 0)
                 return false;
-            if (!SDL_SetRenderTarget(m_Renderer, m_Texture.get()))
+            if (!m_WebGPURenderer)
             {
-                Log::Error("[RenderViewport]"," Bind failed: {}", SDL_GetError());
+                Log::Warn("RenderViewport", "ResizeWebGPU called without a WebGPU renderer.");
                 return false;
             }
+
+            if (m_WgpuTexture && width == m_Width && height == m_Height)
+                return true;
+
+            DestroyWebGPU();
+            m_WebGPURenderer->ClearViewportRenderTarget();
+
+            WGPUTextureDescriptor desc{};
+            desc.size = {static_cast<uint32_t>(width), static_cast<uint32_t>(height), 1};
+            desc.format = m_WebGPURenderer->GetSurfaceFormat();
+            desc.usage = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_TextureBinding;
+            desc.dimension = WGPUTextureDimension_2D;
+            desc.mipLevelCount = 1;
+            desc.sampleCount = 1;
+
+            m_WgpuTexture = wgpuDeviceCreateTexture(m_WebGPURenderer->GetDevice(), &desc);
+            if (!m_WgpuTexture)
+            {
+                Log::Error("RenderViewport", "Failed to create WebGPU viewport texture.");
+
+                m_Width = 0;
+                m_Height = 0;
+
+                return false;
+            }
+
+            WGPUTextureViewDescriptor viewDesc{};
+            viewDesc.format = desc.format;
+            viewDesc.dimension = WGPUTextureViewDimension_2D;
+            viewDesc.mipLevelCount = 1;
+            viewDesc.arrayLayerCount = 1;
+            viewDesc.aspect = WGPUTextureAspect_All;
+            m_WgpuView = wgpuTextureCreateView(m_WgpuTexture, &viewDesc);
+
+            if (!m_WgpuView)
+            {
+                Log::Error("RenderViewport", "Failed to create WebGPU viewport texture view.");
+                DestroyWebGPU();
+                m_WebGPURenderer->ClearViewportRenderTarget();
+                m_Width = 0;
+                m_Height = 0;
+                return false;
+            }
+
+            m_Width = width;
+            m_Height = height;
+            m_WebGPURenderer->SetViewportRenderTarget(m_WgpuView, m_Width, m_Height);
             return true;
+        }
+
+        // Redirect SDL rendering to this texture.
+        bool BindSDL() const
+        {
+            if (!m_Renderer || !m_Texture)
+                return false;
+
+            if (!SDL_SetRenderTarget(m_Renderer, m_Texture.get()))
+            {
+                Log::Error("RenderViewport", " Bind failed: {}", SDL_GetError());
+                return false;
+            }
+            SDL_RenderClear(m_Renderer);
+
+            return true;
+        }
+        bool BindWebGPU() const
+        {
+            return m_WgpuView != nullptr;
         }
 
         // Restore rendering to the default backbuffer.
-        bool Unbind() const
+        bool UnbindSDL() const
         {
-            SDL_assert(m_Renderer);
+            if (!m_Renderer)
+                return false;
             if (!SDL_SetRenderTarget(m_Renderer, nullptr))
             {
-                Log::Error("[RenderViewport]","Unbind failed: {}", SDL_GetError());
+                Log::Error("RenderViewport", "Unbind failed: {}", SDL_GetError());
                 return false;
             }
             return true;
         }
+        bool UnbindWebGPU() const
+        {
+            return true;
+        }
 
-        SDL_Texture* GetTexture() const { return m_Texture.get(); }
-        void* GetImTextureID() const { return static_cast<void*>(m_Texture.get()); }
+        SDL_Texture* GetSDLTexture() const { return m_Texture.get(); }
+        WGPUTextureView GetWebGPUTextureView() const { return m_WgpuView; }
+        ImTextureID  GetImTextureID() const
+        {
+            if (m_WgpuView)
+                return reinterpret_cast<ImTextureID>(m_WgpuView);
+
+            return reinterpret_cast<ImTextureID>(m_Texture.get());
+        }
+        ImTextureID GetWebGPUImTextureID() const
+        {
+            return reinterpret_cast<ImTextureID>(m_WgpuView);
+        }
         int GetWidth() const { return m_Width; }
         int GetHeight() const { return m_Height; }
         void SetScreenPos(float x, float y)
@@ -107,11 +228,32 @@ namespace Cadmium::Editor
         }
         float GetScreenX() const { return m_ScreenX; }
         float GetScreenY() const { return m_ScreenY; }
-        bool IsReady() const { return m_Texture != nullptr; }
+        bool IsReady() const { return m_Texture || m_WgpuView; }
+
+      private:
+        void DestroyWebGPU()
+        {
+            if (m_WgpuView)
+            {
+                wgpuTextureViewRelease(m_WgpuView);
+                m_WgpuView = nullptr;
+            }
+
+            if (m_WgpuTexture)
+            {
+                wgpuTextureRelease(m_WgpuTexture);
+                m_WgpuTexture = nullptr;
+            }
+        }
 
       private:
         SDL_Renderer* m_Renderer{nullptr};
         std::unique_ptr<SDL_Texture, SdlTextureDeleter> m_Texture;
+
+        WebGPURenderer* m_WebGPURenderer{nullptr};
+        WGPUTexture m_WgpuTexture{nullptr};
+        WGPUTextureView m_WgpuView{nullptr};
+
         int m_Width{0};
         int m_Height{0};
         float m_ScreenX{0.f};

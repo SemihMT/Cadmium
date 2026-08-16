@@ -1,19 +1,22 @@
 #include <cadmium/core/engine.hpp>
 #include <iostream>
 #include <memory>
-#include "menu_scene.hpp"
+#include <cadmium/core/scene.hpp>
+#include <cadmium/render/renderer_backend.hpp>
 #include <cadmium/editor/editor_overlay_layer.hpp>
-
+#include "texture_lifecycle_test_layer.hpp"
 
 int main()
 {
   try
   {
-    Cadmium::Engine engine("Cadmium - Asteroids", 1280, 720);
+    Cadmium::Engine engine("Cadmium - Asteroids", 1280, 720, Cadmium::RendererBackend::WebGPU);
     engine.PushGlobalOverlay(std::make_unique<Cadmium::Editor::EditorOverlayLayer>(engine.GetAssets(), engine.GetRenderer(),&engine));
+
     engine.DisableDefaultBackground();
     engine.SetTargetFPS(60);
-    engine.PushScene(std::make_unique<Sandbox::MenuScene>());
+    engine.PushScene(std::make_unique<Cadmium::Scene>("Test"));
+    engine.PushOverlay(std::make_unique<Cadmium::TextureLifecycleTestLayer>("textures/test_atlas.png"));
     engine.Run();
   }
   catch (const std::exception& e)

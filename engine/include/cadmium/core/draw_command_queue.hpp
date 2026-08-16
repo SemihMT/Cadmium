@@ -1,16 +1,32 @@
 #ifndef CADMIUM_DRAW_COMNMAND_QUEUE
 #define CADMIUM_DRAW_COMNMAND_QUEUE
+#include <glm/ext/vector_float2.hpp>
 #include <cadmium/core/handles.hpp>
-#include <SDL3/SDL.h>
+#include <cstdint>
 #include <string>
 #include <variant>
 #include <vector>
 
 namespace Cadmium
 {
+
+    struct ColorUint8
+    {
+        uint8_t r = 255, g = 255, b = 255, a = 255;
+    };
+
     struct Color
     {
         float r = 1.f, g = 1.f, b = 1.f, a = 1.f;
+
+        ColorUint8 ToUint8() const
+        {
+            return {
+                static_cast<uint8_t>(r * 255.f),
+                static_cast<uint8_t>(g * 255.f),
+                static_cast<uint8_t>(b * 255.f),
+                static_cast<uint8_t>(a * 255.f)};
+        }
 
         static Color White() { return {1, 1, 1, 1}; }
         static Color Black() { return {0, 0, 0, 1}; }
@@ -57,7 +73,7 @@ namespace Cadmium
 
         struct Polygon
         {
-            std::vector<SDL_FPoint> points; // TODO: move away from SDL types
+            std::vector<glm::vec2> points;
             Color color;
             bool filled;
         };
@@ -79,6 +95,8 @@ namespace Cadmium
             Color color;    // tint
             bool flipX = false;
             bool flipY = false;
+            // Non-zero srcW/srcH lets one texture act as an atlas.
+            float srcX = 0.f, srcY = 0.f, srcW = 0.f, srcH = 0.f;
         };
         struct SetCamera
         {

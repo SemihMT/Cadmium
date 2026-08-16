@@ -23,7 +23,7 @@
 namespace Cadmium::Editor
 {
 
-    class EditorOverlayLayer : public Layer
+    class EditorOverlayLayer : public Cadmium::Layer
     {
       public:
         EditorOverlayLayer(AssetManager& assets, IRenderer& renderer, IEngineContext* context)

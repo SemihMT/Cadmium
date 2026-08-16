@@ -3,6 +3,7 @@
 
 #include <cadmium/core/draw_command_queue.hpp>
 #include <cadmium/core/handles.hpp>
+#include <functional>
 #include <string>
 
 namespace Cadmium
@@ -18,8 +19,9 @@ namespace Cadmium
       public:
         virtual ~IRenderer() = default;
 
-        virtual void BeginFrame() = 0;
+        virtual void BeginFrame(Cadmium::Color clearColor) = 0;
         virtual void EndFrame() = 0;
+        virtual void Resize(int width, int height) {}
 
         virtual void DrawLine(const DrawCmd::Line&) = 0;
         virtual void DrawRect(const DrawCmd::Rect&) = 0;
@@ -33,8 +35,13 @@ namespace Cadmium
 
         // Texture lifecycle
         virtual TextureHandle CreateTextureFromFile(const std::string& path) = 0;
+        virtual TextureHandle CreateTextureFromMemory(
+            int width, int height, const void* pixelsRGBA8, int rowBytes = 0) = 0;
         virtual TextureDesc GetTextureDesc(TextureHandle) const = 0;
         virtual void DestroyTexture(TextureHandle) = 0;
+        //Used by TextCache to blit its cached textures.
+        virtual void DrawTexturedQuadScreen(
+            TextureHandle handle, float screenX, float screenY, float width, float height, const Color& tint) = 0;
 
         // Editor Only
         // Renderer defined implementation. Should return a pointer to something that represents a texture in the used backend.
@@ -48,6 +55,17 @@ namespace Cadmium
         // WebGPU:       ImTextureID = WGPUTextureView             (see ImGui_ImplWGPU_RenderDrawData()         in imgui_impl_wgpu.cpp)
         // from: https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
         virtual void* GetNativeTextureHandle(TextureHandle handle) const { return nullptr; }
+
+        void SetImGuiBeginHook(std::function<void()> hook) {m_ImGuiBeginHook = std::move(hook);}
+        void SetImGuiRenderHook(std::function<void(void*)> hook) { m_ImGuiRenderHook = std::move(hook); }
+
+        protected:
+        void InvokeImGuiBeginHook() { if (m_ImGuiBeginHook) m_ImGuiBeginHook(); }
+        void InvokeImGuiHook(void* backendHandle) { if (m_ImGuiRenderHook) m_ImGuiRenderHook(backendHandle); }
+
+        private:
+        std::function<void()> m_ImGuiBeginHook;
+        std::function<void(void*)> m_ImGuiRenderHook;
     };
 
     template <typename Cmd> void DispatchDrawCommand(IRenderer& renderer, const Cmd& cmd)

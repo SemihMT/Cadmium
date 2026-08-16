@@ -25,8 +25,8 @@
       "hidden": true,
       "inherits": "base",
       "cacheVariables": {
-        "CMAKE_C_COMPILER": "clang-cl",
-        "CMAKE_CXX_COMPILER": "clang-cl"
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
       }
     },
     {
@@ -35,10 +35,7 @@
       "inherits": "base",
       "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
       "cacheVariables": {
-        "CMAKE_EXECUTABLE_SUFFIX": ".html",
-        "CMAKE_CXX_FLAGS": "",
-        "CMAKE_C_FLAGS": "",
-        "CMAKE_EXE_LINKER_FLAGS": ""
+        "CMAKE_EXECUTABLE_SUFFIX": ".html"
       }
     },
     {
