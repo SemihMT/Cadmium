@@ -38,10 +38,19 @@ public:
 
     //  Render
 
-    void Render(const char* windowName = "Console")
+    // open: optional visibility toggle, driven by the editor's Window menu.
+    //       Pass nullptr to always render (original behaviour, no close button).
+    void Render(const char* windowName = "Console", bool* open = nullptr)
     {
 #ifdef CADMIUM_IMGUI
-        ImGui::Begin(windowName);
+        if (open && !*open)
+            return;
+
+        if (!ImGui::Begin(windowName, open))
+        {
+            ImGui::End();
+            return;
+        }
         RenderToolbar();
         RenderOutput();
         ImGui::End();

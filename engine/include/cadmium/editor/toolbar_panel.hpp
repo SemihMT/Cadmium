@@ -18,13 +18,16 @@ class ToolbarPanel
 public:
     // Render the toolbar as a full-width menu-bar-style strip.
     // state is read and written directly.
+    // yOffset: vertical pixel offset to pin below (e.g. a real ImGui main
+    //          menu bar sitting above it). Defaults to 0 (pinned to the
+    //          very top), matching the original behaviour.
     // Returns true if state changed this frame.
-    bool Render(EditorState& state)
+    bool Render(EditorState& state, float yOffset = 0.f)
     {
 #ifdef CADMIUM_IMGUI
         bool changed = false;
 
-        // Full-width overlay toolbar pinned to the top of the screen.
+        // Full-width overlay toolbar pinned below yOffset.
         ImGuiIO&  io      = ImGui::GetIO();
         ImGuiWindowFlags flags =
             ImGuiWindowFlags_NoDecoration    |
@@ -33,7 +36,7 @@ public:
             ImGuiWindowFlags_NoScrollbar     |
             ImGuiWindowFlags_NoScrollWithMouse;
 
-        ImGui::SetNextWindowPos({ 0.f, 0.f });
+        ImGui::SetNextWindowPos({ 0.f, yOffset });
         ImGui::SetNextWindowSize({ io.DisplaySize.x, k_ToolbarHeight });
         ImGui::SetNextWindowBgAlpha(0.85f);
 
@@ -59,7 +62,7 @@ public:
         {
             ImGui::PushStyleColor(ImGuiCol_Button,
                                   ImVec4(0.2f, 0.6f, 0.2f, 1.f));
-            if (ImGui::Button("  ▶  Play  "))
+            if (ImGui::Button("  \xE2\x96\xB6  Play  "))
             {
                 state   = EditorState::Play;
                 changed = true;
@@ -70,7 +73,7 @@ public:
         {
             ImGui::PushStyleColor(ImGuiCol_Button,
                                   ImVec4(0.7f, 0.2f, 0.2f, 1.f));
-            if (ImGui::Button("  ■  Stop  "))
+            if (ImGui::Button("  \xE2\x96\xA0  Stop  "))
             {
                 state   = EditorState::Edit;
                 changed = true;
@@ -90,6 +93,7 @@ public:
 
         return changed;
 #else
+        (void)yOffset;
         return false;
 #endif
     }
