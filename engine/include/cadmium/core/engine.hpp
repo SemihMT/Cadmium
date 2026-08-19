@@ -73,6 +73,11 @@ namespace Cadmium
     void ResizeViewport(int w, int h) override;
     Editor::RenderViewport& GetViewport() override;
 
+    // Lets the editor stop scene->GetWorld().Update() from running during
+    // Edit mode (see Iterate())
+    void SetSimulationPaused(bool paused) override;
+    bool IsSimulationPaused() const override;
+
 
   private:
     void Iterate();
@@ -107,6 +112,7 @@ namespace Cadmium
     bool m_Started{false}; // true when the engine has started processing frames
     bool m_UseViewport{false};
     bool m_UseDefaultBackground{true};
+    bool m_SimulationPaused{false}; // see SetSimulationPaused; gates scene->GetWorld().Update() in Iterate()
 
     Cadmium::Color m_ClearColor{0.3f, 0.3f, 0.7f, 1.0f};
 

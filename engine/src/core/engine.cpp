@@ -197,7 +197,12 @@ namespace Cadmium
           for (auto& layer : layerStack)
               layer->OnFixedUpdate(m_FixedTimestep);
 
-          scene->GetWorld().Update(m_FixedTimestep);
+          // Gated by m_SimulationPaused (see SetSimulationPaused) so the
+          // editor's Edit/Play toggle can actually stop gameplay logic
+          // (ScriptSystem::OnUpdate -> OnStart/OnUpdate hooks) from running
+          // only the ECS/script simulation step is skipped.
+          if (!m_SimulationPaused)
+              scene->GetWorld().Update(m_FixedTimestep);
           m_Accumulator -= m_FixedTimestep;
         }
 
@@ -337,6 +342,16 @@ namespace Cadmium
     void Engine::RequestQuit()
     {
         m_Running = false;
+    }
+
+    void Engine::SetSimulationPaused(bool paused)
+    {
+        m_SimulationPaused = paused;
+    }
+
+    bool Engine::IsSimulationPaused() const
+    {
+        return m_SimulationPaused;
     }
 
     int Engine::GetWidth() const

@@ -32,6 +32,8 @@ namespace Cadmium
     virtual int GetHeight() const = 0;
     virtual IRenderer& GetRenderer() = 0;
     virtual void SetDefaultBackground(bool enabled) = 0;
+    virtual void SetSimulationPaused(bool paused) = 0;
+    virtual bool IsSimulationPaused() const = 0;
     virtual Scene* GetActiveScene() = 0;
     virtual void PushLayer(std::unique_ptr<Layer> layer) = 0;
     virtual void PushOverlay(std::unique_ptr<Layer> layer) = 0;
