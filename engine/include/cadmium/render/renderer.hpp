@@ -56,6 +56,10 @@ namespace Cadmium
         // from: https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
         virtual void* GetNativeTextureHandle(TextureHandle handle) const { return nullptr; }
 
+        virtual void WorldToScreen(float worldX, float worldY, float& screenX, float& screenY) const = 0;
+        virtual void ScreenToWorld(float screenX, float screenY, float& worldX, float& worldY) const = 0;
+
+
         void SetImGuiBeginHook(std::function<void()> hook) {m_ImGuiBeginHook = std::move(hook);}
         void SetImGuiRenderHook(std::function<void(void*)> hook) { m_ImGuiRenderHook = std::move(hook); }
 

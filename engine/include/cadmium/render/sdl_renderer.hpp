@@ -338,6 +338,17 @@ namespace Cadmium
             return it != m_Textures.end() ? static_cast<void*>(it->second.texture) : nullptr;
         }
 
+        void WorldToScreen(float worldX, float worldY, float& screenX, float& screenY) const override
+        {
+            ToScreen(worldX, worldY, screenX, screenY);
+        }
+
+        void ScreenToWorld(float screenX, float screenY, float& worldX, float& worldY) const override
+        {
+            worldX = (screenX - m_ScreenWidth * 0.5f) / m_CamZoom + m_CamX;
+            worldY = (screenY - m_ScreenHeight * 0.5f) / m_CamZoom + m_CamY;
+        }
+
       private:
         void ToScreen(float wx, float wy, float& sx, float& sy) const
         {

@@ -584,6 +584,17 @@ namespace Cadmium
         m_CamZoom = 1.0f;
     }
 
+    void WebGPURenderer::WorldToScreen(float worldX, float worldY, float& screenX, float& screenY) const
+    {
+        ToScreen(worldX, worldY, screenX, screenY);
+    }
+
+    void WebGPURenderer::ScreenToWorld(float screenX, float screenY, float& worldX, float& worldY) const
+    {
+        worldX = (screenX - CurrentTargetWidth() * 0.5f) / m_CamZoom + m_CamX;
+        worldY = (screenY - CurrentTargetHeight() * 0.5f) / m_CamZoom + m_CamY;
+    }
+
     TextureHandle WebGPURenderer::CreateTextureFromFile(const std::string& path)
     {
         SDL_Surface* raw = IMG_Load(path.c_str());

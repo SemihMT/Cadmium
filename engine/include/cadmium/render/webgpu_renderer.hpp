@@ -57,6 +57,8 @@ namespace Cadmium
 
         void SetCamera(const DrawCmd::SetCamera&) override;
         void ResetCamera(const DrawCmd::ResetCamera&) override;
+        void WorldToScreen(float worldX, float worldY, float& screenX, float& screenY) const override;
+        void ScreenToWorld(float screenX, float screenY, float& worldX, float& worldY) const override;
 
         // -------------------------------------------------------------------------
         // Textures
