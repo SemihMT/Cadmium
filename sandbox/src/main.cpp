@@ -4,6 +4,7 @@
 #include <cadmium/core/scene.hpp>
 #include <cadmium/render/renderer_backend.hpp>
 #include <cadmium/editor/editor_overlay_layer.hpp>
+#include "cadmium/scripting/script_render_layer.hpp"
 #include "texture_lifecycle_test_layer.hpp"
 
 int main()
@@ -16,6 +17,7 @@ int main()
     engine.DisableDefaultBackground();
     engine.SetTargetFPS(60);
     engine.PushScene(std::make_unique<Cadmium::Scene>("Test"));
+    engine.PushLayer(std::make_unique<Cadmium::ScriptRenderLayer>());
     engine.PushOverlay(std::make_unique<Cadmium::TextureLifecycleTestLayer>("textures/test_atlas.png"));
     engine.Run();
   }

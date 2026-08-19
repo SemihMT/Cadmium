@@ -4,36 +4,20 @@
 // Manual/visual smoke test for the textured sprite pipeline: texture
 // lifecycle (create/destroy), atlas sub-rects, flip/rotation, and
 // draw-order preservation between the flat and textured pipelines.
-//
-// This is not a unit test - IRenderer needs a live device/surface, so
-// it runs as a Layer you push onto the engine like any other. Push it
-// on top of everything else (PushOverlay) so nothing else draws over
-// it and confuses the visual checks.
-//
-// Wire-up:
-//   engine.PushOverlay(std::make_unique<Cadmium::TextureLifecycleTestLayer>(
-//       "assets/textures/test_atlas.png"));
-//
-// The referenced image should be at least a 128x128 sheet with at
-// least two visually distinct quadrants (e.g. red top-left, blue
-// bottom-right) so the atlas sub-rect test is actually legible - a
-// single flat-colored image will pass every check silently and prove
-// nothing.
-//
+
 // Controls (see OnEvent):
 //   SPACE - advance to the next test phase
 //   D     - destroy the loaded texture immediately (out of sequence),
 //           to confirm nothing crashes for the rest of the run
-//
-// Console output uses category "TextureLifecycleTest". Every
-// programmatically-checkable case prints PASS/FAIL; the rest are
-// visual and print what you should be looking at.
 
+
+#include "cadmium/scripting/script_system.hpp"
 #include <cadmium/core/layer.hpp>
 #include <cadmium/core/logger.hpp>
 #include <cadmium/render/renderer.hpp>
 #include <cadmium/core/draw_command_queue.hpp>
 #include <cadmium/core/handles.hpp>
+#include <cadmium/ecs/world.hpp>
 
 #include <SDL3/SDL.h>
 
@@ -52,6 +36,7 @@ namespace Cadmium
         void OnAttach() override
         {
             SetDefaultBackground(true);
+            GetWorld().RegisterSystem<Cadmium::ScriptSystem>(0);
 
             m_Texture = GetAssets().LoadTexture(m_AtlasPath);
             TextureDesc desc = GetRenderer().GetTextureDesc(m_Texture);
