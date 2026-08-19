@@ -1,9 +1,11 @@
 #ifndef CADMIUM_EDITOR_IMGUI_ASSET_PANEL_HPP
 #define CADMIUM_EDITOR_IMGUI_ASSET_PANEL_HPP
 
-#include "cadmium/render/renderer.hpp"
+#include <cadmium/render/renderer.hpp>
 #include <cadmium/assets/asset_manager.hpp>
 #include <cadmium/core/cadmium_theme.hpp>
+#include <cadmium/editor/asset_drag_payload.hpp>
+#include <cadmium/editor/editor_selection.hpp>
 #include <functional>
 #include <imgui.h>
 
@@ -14,8 +16,7 @@ namespace Cadmium::Editor
 //  AssetPanel
 // ImGui panel that displays all project assets organised by type.
 // Shows texture thumbnails, file metadata, and load status.
-// Calls an optional callback when an asset is double-clicked -
-// the editor uses this to open scripts, insert asset references etc.
+// Calls an optional callback when an asset is double-clicked
 class AssetPanel
 {
 public:
@@ -29,10 +30,23 @@ public:
     void SetOnSelect(SelectCallback cb) { m_OnSelect = std::move(cb); }
 
     // Call from your ImGui render pass each frame.
+    // selection: shared across panels so an asset selected/opened here
+    // (e.g. via the Hierarchy attaching a script, or the Script Editor
+    // opening a file) stays in sync everywhere instead of only living in
+    // this panel's own state.
     // windowName: the ImGui window title
-    void Render(const char* windowName = "Assets")
+    // open: optional visibility toggle, driven by the editor's Window menu.
+    //       Pass nullptr to always render
+    void Render(EditorSelectionContext& selection, const char* windowName = "Assets", bool* open = nullptr)
     {
-        ImGui::Begin(windowName);
+        if (open && !*open)
+            return;
+
+        if (!ImGui::Begin(windowName, open))
+        {
+            ImGui::End();
+            return;
+        }
 
         //  Toolbar
         if (ImGui::Button("Refresh"))
@@ -112,18 +126,18 @@ public:
             if (filtered.empty()) continue;
 
             // Section header
-            bool open = ImGui::CollapsingHeader(
+            bool sectionOpen = ImGui::CollapsingHeader(
                 AssetTypeName(type),
                 ImGuiTreeNodeFlags_DefaultOpen);
 
-            if (!open) continue;
+            if (!sectionOpen) continue;
 
             ImGui::PushID(AssetTypeName(type));
 
             if (m_ViewMode == ViewMode::List)
-                RenderList(filtered);
+                RenderList(filtered, selection);
             else
-                RenderGrid(filtered);
+                RenderGrid(filtered, selection);
 
             ImGui::PopID();
             ImGui::Spacing();
@@ -141,14 +155,13 @@ private:
     ViewMode       m_ViewMode    = ViewMode::Grid;
     int            m_ThumbnailSize = 96;
     char           m_FilterBuf[128] {};
-    std::string    m_Selected;   // currently selected path
 
     //  List view
-    void RenderList(const std::vector<const AssetEntry*>& entries)
+    void RenderList(const std::vector<const AssetEntry*>& entries, EditorSelectionContext& selection)
     {
         for (const AssetEntry* entry : entries)
         {
-            bool isSelected = (m_Selected == entry->path);
+            bool isSelected = (selection.GetAssetPath() == entry->path);
 
             // Status indicator
             ImVec4 statusColor = entry->loaded
@@ -156,7 +169,7 @@ private:
                 : ImVec4(0.5f, 0.5f, 0.5f, 1.f);   // gray = on disk only
 
             ImGui::PushStyleColor(ImGuiCol_Text, statusColor);
-            ImGui::TextUnformatted("●");
+            ImGui::TextUnformatted("\xE2\x97\x8F");
             ImGui::PopStyleColor();
             ImGui::SameLine();
 
@@ -166,24 +179,26 @@ private:
                                    isSelected,
                                    ImGuiSelectableFlags_AllowDoubleClick))
             {
-                m_Selected = entry->path;
+                selection.SelectAsset(entry->path);
                 if (ImGui::IsMouseDoubleClicked(0) && m_OnSelect)
                     m_OnSelect(entry->path, entry->type);
             }
+
+            DragSource(*entry);
 
             // Tooltip with metadata
             if (ImGui::IsItemHovered())
                 RenderTooltip(*entry);
 
             // Right-click context menu
-            RenderContextMenu(*entry);
+            RenderContextMenu(*entry, selection);
 
             ImGui::PopID();
         }
     }
 
     //  Grid view
-    void RenderGrid(const std::vector<const AssetEntry *> &entries)
+    void RenderGrid(const std::vector<const AssetEntry *> &entries, EditorSelectionContext& selection)
     {
         float thumbF = (float)m_ThumbnailSize;
         float spacing = ImGui::GetStyle().ItemSpacing.x;
@@ -201,7 +216,7 @@ private:
         {
             ImGui::PushID(entry->path.c_str());
 
-            bool isSelected = (m_Selected == entry->path);
+            bool isSelected = (selection.GetAssetPath() == entry->path);
 
             // Entire cell region
             ImVec2 cellStart = ImGui::GetCursorScreenPos();
@@ -243,8 +258,27 @@ private:
 
                     ImVec2 cursor = ImGui::GetCursorScreenPos();
 
-                    // Reserve exact thumbnail space
+                    // Reserve exact thumbnail space, and let this be the
+                    // single interaction target for click/double-click/hover
                     ImGui::InvisibleButton("thumb", ImVec2(thumbF, thumbF));
+
+                    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
+                    {
+                        selection.SelectAsset(entry->path);
+                        if (m_OnSelect)
+                            m_OnSelect(entry->path, entry->type);
+                    }
+                    else if (ImGui::IsItemClicked())
+                    {
+                        selection.SelectAsset(entry->path);
+                    }
+
+                    DragSource(*entry);
+
+                    if (ImGui::IsItemHovered())
+                        RenderTooltip(*entry);
+
+                    RenderContextMenu(*entry, selection);
 
                     // Draw centered texture manually
                     ImGui::GetWindowDrawList()->AddImage(
@@ -260,22 +294,31 @@ private:
             }
             else
             {
-                RenderPlaceholder(thumbF, entry->type);
+                ImVec2 cursor = ImGui::GetCursorScreenPos();
+
+                // Same interaction target pattern as the texture branch above
+                ImGui::InvisibleButton("thumb_ph", ImVec2(thumbF, thumbF));
+
+                if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
+                {
+                    selection.SelectAsset(entry->path);
+                    if (m_OnSelect)
+                        m_OnSelect(entry->path, entry->type);
+                }
+                else if (ImGui::IsItemClicked())
+                {
+                    selection.SelectAsset(entry->path);
+                }
+
+                DragSource(*entry);
+
+                if (ImGui::IsItemHovered())
+                    RenderTooltip(*entry);
+
+                RenderContextMenu(*entry, selection);
+
+                DrawPlaceholderRect(cursor, thumbF, entry->type);
             }
-
-            // INTERACTION
-            if (ImGui::IsItemClicked())
-            {
-                m_Selected = entry->path;
-
-                if (ImGui::IsMouseDoubleClicked(0) && m_OnSelect)
-                    m_OnSelect(entry->path, entry->type);
-            }
-
-            if (ImGui::IsItemHovered())
-                RenderTooltip(*entry);
-
-            RenderContextMenu(*entry);
 
             // LABEL
             std::string label =
@@ -306,7 +349,16 @@ private:
     //  Type placeholder
     void RenderPlaceholder(float size, AssetType type)
     {
-        ImVec2 pos  = ImGui::GetCursorScreenPos();
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+        DrawPlaceholderRect(pos, size, type);
+        // Advance cursor past the placeholder
+        ImGui::Dummy(ImVec2(size, size));
+    }
+
+    // Draws the placeholder tile at an explicit position without touching
+    // the cursor
+    void DrawPlaceholderRect(ImVec2 pos, float size, AssetType type)
+    {
         ImVec2 end  = ImVec2(pos.x + size, pos.y + size);
         auto* dl    = ImGui::GetWindowDrawList();
 
@@ -347,9 +399,21 @@ private:
                    pos.y + (size - textSize.y) * 0.5f),
             IM_COL32(200, 200, 200, 255),
             label);
+    }
 
-        // Advance cursor past the placeholder
-        ImGui::Dummy(ImVec2(size, size));
+    //  Drag source
+    // Called immediately after the item widget for an entry (Selectable in
+    // list view, InvisibleButton in grid view) so the entry can be dragged
+    // onto the Hierarchy (attach) or Inspector (assign to a field).
+    void DragSource(const AssetEntry& entry)
+    {
+        if (ImGui::BeginDragDropSource())
+        {
+            AssetDragPayload payload = AssetDragPayload::Make(entry.path, entry.type);
+            ImGui::SetDragDropPayload(k_AssetDragDropId, &payload, sizeof(payload));
+            ImGui::Text("%s", entry.filename.c_str());
+            ImGui::EndDragDropSource();
+        }
     }
 
     //  Tooltip
@@ -386,7 +450,7 @@ private:
     }
 
     //  Context menu
-    void RenderContextMenu(const AssetEntry& entry)
+    void RenderContextMenu(const AssetEntry& entry, EditorSelectionContext& selection)
     {
         std::string menuId = "ctx_" + entry.path;
         if (!ImGui::BeginPopupContextItem(menuId.c_str())) return;
@@ -424,7 +488,7 @@ private:
             ImGui::Separator();
             if (ImGui::MenuItem("Open in Editor"))
             {
-                m_Selected = entry.path;
+                selection.SelectAsset(entry.path);
                 if (m_OnSelect) m_OnSelect(entry.path, entry.type);
             }
         }
@@ -444,6 +508,6 @@ private:
     }
 };
 
-} // namespace Cadmium::Editor.
+} // namespace Cadmium::Editor
 
 #endif // CADMIUM_EDITOR_IMGUI_ASSET_PANEL_HPP
