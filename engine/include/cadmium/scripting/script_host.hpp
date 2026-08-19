@@ -188,6 +188,66 @@ namespace Cadmium
 
         sol::state& GetState() { return m_Lua; }
 
+        //  Hot-reload local ("private field") preservation
+        //
+        // LoadScript() re-executes the whole chunk from scratch, so any
+        // top-level `local x = ...` in the script gets reinitialized
+        // that's the deliberate local/global split this scripting model
+        // uses (globals-in-_ENV are inspector-visible fields via the
+        // Range/Tooltip/Widget metadata system above; locals are hidden
+        // runtime state, same idea as private vs. [SerializeField]/public
+        // in a Unity MonoBehaviour). Without this, a hot reload silently
+        // resets every local back to its initial value, discarding
+        // whatever gameplay had done to it since OnStart.
+        //
+        // A Lua local only becomes a real upvalue - something reachable
+        // from outside the closure that declared it - if at least one
+        // inner function (here, one of the four hooks) actually
+        // references it. A local declared but never read/written by
+        // OnStart/OnUpdate/OnRender/OnDestroy has no upvalue at all and
+        // can't be captured; this is a genuine Lua limitation - there's no
+        // upvalue to preserve, so nothing to fix on this end.
+        //
+        // Sibling closures created in the same chunk share the same
+        // upvalue object for a jointly-referenced local, so restoring the
+        // saved value into any one hook function is enough to make every
+        // other hook that references the same local see it too - this
+        // restores it into all four anyway since that's simpler than
+        // detecting which functions actually share which upvalues, and a
+        // hook that doesn't reference a given local just won't enumerate
+        // it, so the extra attempts are harmless no-ops.
+
+        // Captures every upvalue visible across a ScriptInstance's four
+        // hook functions, keyed by name. Call this on the OLD instance
+        // right before overwriting its env/functions with a freshly
+        // reloaded version.
+        static std::unordered_map<std::string, sol::object> CaptureLocals(const ScriptInstance& instance)
+        {
+            std::unordered_map<std::string, sol::object> locals;
+            CaptureUpvalues(instance.onStart, locals);
+            CaptureUpvalues(instance.onUpdate, locals);
+            CaptureUpvalues(instance.onRender, locals);
+            CaptureUpvalues(instance.onDestroy, locals);
+            return locals;
+        }
+
+        // Writes previously-captured locals back into a ScriptInstance's
+        // (freshly-reloaded) hook functions, matched by name. A local
+        // that no longer exists in the edited script (renamed/removed) is
+        // silently skipped; a newly-added local keeps whatever its fresh
+        // `local x = ...` initializer set it to, since there's nothing
+        // saved to restore it from.
+        static void RestoreLocals(ScriptInstance& instance,
+                                  const std::unordered_map<std::string, sol::object>& locals)
+        {
+            if (locals.empty())
+                return;
+            RestoreUpvalues(instance.onStart, locals);
+            RestoreUpvalues(instance.onUpdate, locals);
+            RestoreUpvalues(instance.onRender, locals);
+            RestoreUpvalues(instance.onDestroy, locals);
+        }
+
       private:
         struct PendingState
         {
@@ -198,6 +258,62 @@ namespace Cadmium
 
             bool HasAny() const { return hasRange || hasTooltip || hasWidget; }
         };
+
+        static void CaptureUpvalues(const sol::function& fn, std::unordered_map<std::string, sol::object>& out)
+        {
+            if (!fn.valid())
+                return;
+
+            lua_State* L = fn.lua_state();
+            int base = lua_gettop(L);
+            fn.push(L);
+            int funcIdx = base + 1;
+
+            for (int i = 1;; ++i)
+            {
+                const char* name = lua_getupvalue(L, funcIdx, i);
+                if (!name)
+                    break;
+                // lua_getupvalue pushed the current value onto the stack.
+                if (name[0] != '\0' && std::string(name) != "_ENV")
+                    out[name] = sol::stack::get<sol::object>(L, -1);
+                lua_pop(L, 1);
+            }
+
+            lua_settop(L, base); // also pops the function pushed above
+        }
+
+        static void RestoreUpvalues(sol::function& fn, const std::unordered_map<std::string, sol::object>& saved)
+        {
+            if (!fn.valid())
+                return;
+
+            lua_State* L = fn.lua_state();
+            int base = lua_gettop(L);
+            fn.push(L);
+            int funcIdx = base + 1;
+
+            for (int i = 1;; ++i)
+            {
+                const char* name = lua_getupvalue(L, funcIdx, i);
+                if (!name)
+                    break;
+                lua_pop(L, 1); // discard the freshly-initialized value - only the name matters here
+
+                if (name[0] != '\0' && std::string(name) != "_ENV")
+                {
+                    auto it = saved.find(name);
+                    if (it != saved.end())
+                    {
+                        it->second.push(L);
+                        lua_setupvalue(L, funcIdx, i); // pops the value just pushed
+                    }
+                }
+            }
+
+            lua_settop(L, base);
+        }
+
         void InstallPrintOverride()
         {
             m_Lua.set_function("print",
